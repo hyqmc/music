@@ -108,7 +108,7 @@ function populateSelect(selectId, optionsMap) {
     select.appendChild(randomOption);
     
     for (const value in optionsMap) {
-        let option = document.createElement('option');
+        let option = document.createElement('option';
         option.value = value;
         option.textContent = optionsMap[value];
         select.appendChild(option);
@@ -572,73 +572,70 @@ function renderPianoKeyboard(baseRoot, modeKey) {
     const rootChromaIndex = NOTES.indexOf(baseRoot);
     const scaleChromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
     
-    // Calcula o deslocamento inicial para centralizar a raiz (Ex: A3)
-    // Usaremos a faixa C3 a B5 (2.5 oitavas)
-    // C0 a B0 = 0-11, C1 a B1 = 12-23, C2 a B2 = 24-35, C3 a B3 = 36-47
-    
-    // A nota C4 tem o índice absoluto 48. A tônica deve ser aproximadamente a 3ª oitava (C4-B4)
-    // Vamos usar a faixa C3 a G5 (33 notas, aproximadamente 2.75 oitavas)
-    const START_NOTE_CHROMA = (rootChromaIndex - 12 + 12 * 3) % (12 * 4); // C3 (36) se a raiz for C
-    
-    // Ajuste: encontrar o C mais próximo que está 1 oitava abaixo da raiz
-    let absoluteRootIndex = 36 + rootChromaIndex; // Coloca a raiz na 4a oitava
-    let startAbsoluteIndex = absoluteRootIndex - 12; // Começa 1 oitava abaixo
-    
-    let keyOffset = 0; // Posição X da tecla branca
+    // Configuração para centralizar: G3 (início) até D5 (fim)
+    // C0 = 0, C3 = 36, C4 = 48
+    const START_NOTE_ABSOLUTE_INDEX = 43; // G3
+    const END_NOTE_ABSOLUTE_INDEX = 62; // D5 (2.5 oitavas)
 
-    // Renderiza 2.5 oitavas, começando na nota que está 1 oitava abaixo da raiz
-    for (let i = 0; i < 33; i++) {
-        const absoluteIndex = startAbsoluteIndex + i;
+    let keyOffset = 0; // Posição X da tecla branca
+    let whiteKeyCount = 0; 
+    
+    // Renderiza a faixa de G3 (43) a D5 (62)
+    for (let absoluteIndex = START_NOTE_ABSOLUTE_INDEX; absoluteIndex <= END_NOTE_ABSOLUTE_INDEX; absoluteIndex++) {
         const chromaIndex = absoluteIndex % 12;
         const note = NOTES[chromaIndex];
         
         const isBlackKey = BLACK_KEYS_CHROMA.includes(chromaIndex);
         const isHighlighted = scaleChromaIndices.includes(chromaIndex);
         const isTonic = (chromaIndex === rootChromaIndex);
-        const octave = Math.floor(absoluteIndex / 12);
 
         const key = document.createElement('div');
-        // Exibe o nome da nota, usando a notação enharmônica para teclas pretas
+        // Exibe o nome da nota, usando a notação enharmônica
         key.textContent = NOTE_NAMES_ENHARMONIC[chromaIndex].replace('/', '/\n');
         key.classList.add('key');
-
-        // Adiciona classe de contraste para oitavas laterais (opcional via CSS)
-        if (octave !== Math.floor(absoluteRootIndex / 12)) {
-             key.classList.add('low-contrast');
-        }
 
         if (!isBlackKey) {
             // Tecla Branca
             key.classList.add('white-key');
-            key.style.left = `${keyOffset * 50}px`; 
-            if (isHighlighted) {
-                key.classList.add('highlighted-white');
-                if (isTonic) key.classList.add('tonic-highlight');
-            }
+            key.style.left = `${keyOffset * 50}px`;
             keyOffset++;
+            whiteKeyCount++;
         } else {
             // Tecla Preta
             key.classList.add('black-key');
             
             let relativeOffset = 0;
-            // Posição ajustada baseada na tecla branca anterior
+            // Posição calculada baseada no whiteKeyCount anterior (sempre o C mais próximo)
+            const whiteKeysBefore = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const octavePos = (absoluteIndex - START_NOTE_ABSOLUTE_INDEX) % 12;
+
             if (chromaIndex === 1) relativeOffset = 33; 
             else if (chromaIndex === 3) relativeOffset = 83; 
             else if (chromaIndex === 6) relativeOffset = 183; 
             else if (chromaIndex === 8) relativeOffset = 233; 
             else if (chromaIndex === 10) relativeOffset = 283; 
-            
-            const totalOffset = (Math.floor(i / 7) * 50 * 7) + relativeOffset;
-            key.style.left = `${totalOffset}px`;
-            
-            if (isHighlighted) {
+
+            // Calcula a posição da tecla preta baseada no offset de 50px por tecla branca
+            key.style.left = `${(whiteKeyCount * 50) + relativeOffset - 50}px`;
+        }
+        
+        // Aplicação de Destaques
+        if (isHighlighted) {
+            if (isBlackKey) {
                 key.classList.add('highlighted-black');
-                if (isTonic) key.classList.add('tonic-highlight');
+                if (isTonic) key.classList.add('tonic-highlight-black');
+            } else {
+                key.classList.add('highlighted-white');
+                if (isTonic) key.classList.add('tonic-highlight-white');
             }
         }
         
         keyboardContainer.appendChild(key);
     }
+    // Ajusta o scroll para centralizar a tônica (aproximadamente)
+    const containerWidth = keyboardContainer.clientWidth;
+    const tonicPosition = (absoluteRootIndex - START_NOTE_ABSOLUTE_INDEX);
+    keyboardContainer.scrollLeft = (tonicPosition * 30) - (containerWidth / 2) + 50; 
 }
 
 
