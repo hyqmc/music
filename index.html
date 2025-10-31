@@ -89,30 +89,42 @@
         <button id="generate-button">GERAR PROGRESSÃO</button>
 
         <section class="results-container" id="results" style="display: none;">
-            <h2>Resultado Gerado</h2>
+    <h2>Resultado</h2>
 
-            <div class="result-box result-progression">
-                <h3>Progressão Cifrada</h3>
-                <pre id="chord-progression"></pre>
-                <button id="copy-button">Copiar Cifra</button>
-            </div>
-
-            <div class="result-box result-analysis">
-                <h3>Análise Harmônica</h3>
-                <p><strong>Contexto:</strong> <span id="out-context"></span></p>
-                <p><strong>Escala Sugerida:</strong> <span id="out-scale"></span></p>
-                <p id="out-verticality-p" style="display: none;"><strong>Verticalidade:</strong> <span id="out-verticality"></span></p>
-            </div>
-
-            <div class="result-box result-transpose">
-                <h3>Transposição</h3>
-                <div class="input-group inline-group">
-                    <label for="transpose-value">Transpor em Semitons:</label>
-                    <input type="number" id="transpose-value" value="0" min="-12" max="12">
-                    <button id="apply-transpose">Aplicar Transposição</button>
+    <div class="result-box result-main-output">
+        
+        <h3>Progressão Cifrada</h3>
+        <pre id="visual-progression" class="progression-display"></pre>
+        
+        <div class="analysis-visual-group">
+            <h4 id="out-scale-name">Escala Sugerida: </h4>
+            <div id="piano-keyboard" class="keyboard-container">
                 </div>
+            
+            <div class="generator-summary">
+                <p>Contexto: <span id="out-context"></span></p>
+                <p>Tonalidade Base: <span id="out-root"></span></p>
+                <p>Modo: <span id="out-mode"></span></p>
+                <p id="out-verticality-p" style="display: none;">Verticalidade: <span id="out-verticality"></span></p>
             </div>
-        </section>
+        </div>
+    </div>
+
+    <div class="result-box result-transpose">
+        <h3>Transposição</h3>
+        <div class="input-group inline-group">
+            <label for="transpose-value">Transpor em Semitons:</label>
+            <input type="number" id="transpose-value" value="0" min="-12" max="12">
+            <button id="apply-transpose">Aplicar Transposição</button>
+        </div>
+    </div>
+
+    <div class="result-box result-copy-output">
+        <h3>Saída para Cópia (Geradores)</h3>
+        <pre id="chord-progression" class="progression-copy-text"></pre>
+        <button id="copy-button">Copiar Tudo</button>
+    </div>
+</section>
     </main>
 
     <script src="script.js"></script>
