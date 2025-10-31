@@ -17,6 +17,7 @@
         <div class="controls-container">
             <section class="control-group" id="context-settings">
                 <h2>1. Contexto e Tonalidade</h2>
+                
                 <div class="input-group">
                     <label for="tonality-context">Escolha o Contexto Harmônico:</label>
                     <select id="tonality-context">
@@ -24,13 +25,35 @@
                         <option value="tonal-jazz">Tonal Aleatório (Jazzística/Substituições)</option>
                         <option value="modal-pura">Progressão Modal Pura</option>
                         <option value="atonal">Atonal (Completamente Aleatória)</option>
+                        <option value="user-notes">Notas Customizadas</option>
                     </select>
                 </div>
-                <div class="input-group" id="modal-mode-select">
-                    <label for="modal-mode">Modo/Tonalidade Base:</label>
-                    <select id="modal-mode">
-                        </select>
+
+                <div id="tonal-selects">
+                    <div class="input-group">
+                        <label for="root-note">Tonalidade Base (Raiz):</label>
+                        <select id="root-note">
+                            </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="scale-family">Família da Escala:</label>
+                        <select id="scale-family">
+                            </select>
+                    </div>
+                    
+                    <div class="input-group" id="modal-mode-select">
+                        <label for="modal-mode">Modo Específico:</label>
+                        <select id="modal-mode">
+                            </select>
+                    </div>
                 </div>
+                
+                <div class="input-group" id="user-notes-input" style="display: none;">
+                    <label>Notas para Geração (Separadas por vírgula):</label>
+                    <input type="text" id="custom-notes" placeholder="Ex: C, D, E, F, G, A, B">
+                </div>
+
             </section>
 
             <section class="control-group" id="complexity-settings">
