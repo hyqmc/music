@@ -1,46 +1,56 @@
 // =======================================================
-// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL
+// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL (FINAL)
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-// Estrutura que agrupa os modos por sua "Família"
-const SCALE_FAMILIES = {
-    'Diatonica_Maior': { name: 'Diatônica Maior', modes: {
-        'major': 'Jônio',
-        'lydian': 'Lídio',
-        'mixolydian': 'Mixolídio',
-    }},
-    'Diatonica_Menor': { name: 'Diatônica Menor', modes: {
-        'aeolian': 'Eólio',
-        'dorian': 'Dórico',
-        'phrygian': 'Frígio',
-        'locrian': 'Lócrio',
-    }},
-    'Harmonica_Menor': { name: 'Harmônica Menor', modes: {
-        'harmonic_minor': 'Menor Harmônica',
-        'phrygian_dominant': 'Frígio Dominante',
-        'ionian_sharp5': 'Jônio #5',
-    }},
-    'Melodica_Menor': { name: 'Melódica Menor', modes: {
-        'melodic_minor': 'Menor Melódica',
-        'lydian_flat7': 'Lídio b7',
-        'superlocrian': 'Superlócrio (Alterada)',
-    }},
+// Mapeamento de nomes de modos para exibição (Completo com 7 graus por escala)
+const MODE_NAMES = {
+    // Diatônica Maior (7 Modos)
+    'major': 'Jônio (Maior)',
+    'dorian': 'Dórico',
+    'phrygian': 'Frígio',
+    'lydian': 'Lídio',
+    'mixolydian': 'Mixolídio',
+    'aeolian': 'Eólio (Menor Natural)',
+    'locrian': 'Lócrio',
+
+    // Menor Harmônica (7 Modos)
+    'harmonic_minor': 'Menor Harmônica',
+    'locrian_sharp6': 'Lócrio ♯6',
+    'ionian_sharp5': 'Jônio ♯5',
+    'dorian_sharp4': 'Dórico ♯4 (Ukrainiana)',
+    'phrygian_dominant': 'Frígio Dominante',
+    'lydian_sharp2': 'Lídio ♯2',
+    'superlocrian_bb7': 'Superlócrio ♭♭7',
+
+    // Menor Melódica Ascendente (Jazz) (7 Modos)
+    'melodic_minor': 'Menor Melódica (Jazz)',
+    'dorian_flat2': 'Dórico ♭2',
+    'lydian_sharp5': 'Lídio ♯5',
+    'lydian_flat7': 'Lídio ♭7',
+    'mixolydian_flat6': 'Mixolídio ♭6',
+    'locrian_sharp2': 'Lócrio ♯2',
+    'superlocrian': 'Superlócrio (Alterada)',
 };
 
-// Mapeamento COMPLETO dos modos com seus INTERVALOS
+// Mapeamento COMPLETO dos modos com seus INTERVALOS (semitons)
 const ALL_MODES_INTERVALS = {
     'major': [0, 2, 4, 5, 7, 9, 11], 'dorian': [0, 2, 3, 5, 7, 9, 10], 'phrygian': [0, 1, 3, 5, 7, 8, 10],
     'lydian': [0, 2, 4, 6, 7, 9, 11], 'mixolydian': [0, 2, 4, 5, 7, 9, 10], 'aeolian': [0, 2, 3, 5, 7, 8, 10],
     'locrian': [0, 1, 3, 5, 6, 8, 10],
-    'harmonic_minor': [0, 2, 3, 5, 7, 8, 11], 'phrygian_dominant': [0, 1, 4, 5, 7, 8, 10], 
-    'ionian_sharp5': [0, 2, 4, 5, 8, 9, 11],
-    'melodic_minor': [0, 2, 3, 5, 7, 9, 11], 'lydian_flat7': [0, 2, 4, 6, 7, 9, 10],
+
+    'harmonic_minor': [0, 2, 3, 5, 7, 8, 11], 'locrian_sharp6': [0, 1, 3, 5, 6, 9, 10],
+    'ionian_sharp5': [0, 2, 4, 5, 8, 9, 11], 'dorian_sharp4': [0, 2, 3, 6, 7, 9, 10], 
+    'phrygian_dominant': [0, 1, 4, 5, 7, 8, 10], 'lydian_sharp2': [0, 3, 4, 6, 7, 9, 11],
+    'superlocrian_bb7': [0, 1, 3, 4, 6, 8, 9], 
+
+    'melodic_minor': [0, 2, 3, 5, 7, 9, 11], 'dorian_flat2': [0, 1, 3, 5, 7, 9, 10],
+    'lydian_sharp5': [0, 2, 4, 6, 8, 9, 11], 'lydian_flat7': [0, 2, 4, 6, 7, 9, 10],
+    'mixolydian_flat6': [0, 2, 4, 5, 7, 8, 10], 'locrian_sharp2': [0, 2, 3, 5, 6, 8, 10],
     'superlocrian': [0, 1, 3, 4, 6, 8, 10], 
 };
 
-// [O restante das constantes QUALITIES, FUNCTION_MAP, FUNCTIONAL_RULES é mantido, omitido por brevidade]
 const QUALITIES = {
     'Triade': ['Maj', 'm', 'dim'], 
     'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
@@ -50,7 +60,6 @@ const QUALITIES = {
 };
 
 const ALTERED_TENSIONS = ['b9', '#9', '#11', 'b13', '#5'];
-
 const FUNCTION_MAP = { 'I': 'T', 'VI': 'T', 'III': 'T', 'II': 'SD', 'IV': 'SD', 'V': 'D', 'VII': 'D' };
 const FUNCTIONAL_RULES = {
     'T': [ { dest: 'SD', chance: 50 }, { dest: 'D', chance: 30 }, { dest: 'T', chance: 20 } ],
@@ -66,6 +75,7 @@ const FUNCTIONAL_RULES = {
 function weightedRandomSelection(rules) {
     const totalWeight = rules.reduce((sum, rule) => sum + rule.chance, 0);
     let randomNum = Math.random() * totalWeight; 
+
     for (const rule of rules) {
         if (randomNum < rule.chance) { return rule.dest; }
         randomNum -= rule.chance;
@@ -97,7 +107,7 @@ function getDiatonicQuality(interval) {
 
 
 // =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS (CORRIGIDO)
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS
 // =======================================================
 
 let currentProgression = []; 
@@ -107,16 +117,15 @@ function populateSelect(selectId, optionsMap) {
     const select = document.getElementById(selectId);
     select.innerHTML = '';
     
-    // Adiciona uma opção de placeholder ou padrão
-    if (selectId !== 'modal-mode') {
-         const defaultOption = document.createElement('option');
-         defaultOption.value = '';
-         defaultOption.textContent = `-- Selecione --`;
-         select.appendChild(defaultOption);
-    }
+    // Adiciona a opção "Aleatório" no topo
+    let randomOption = document.createElement('option');
+    randomOption.value = 'Aleatorio';
+    randomOption.textContent = 'Aleatório';
+    select.appendChild(randomOption);
     
+    // Adiciona as opções de notas/modos
     for (const value in optionsMap) {
-        const option = document.createElement('option');
+        let option = document.createElement('option');
         option.value = value;
         option.textContent = optionsMap[value];
         select.appendChild(option);
@@ -130,57 +139,36 @@ function populateRootSelect() {
     populateSelect('root-note', roots);
 }
 
-// Inicializa o seletor de Família de Escala
-function populateFamilySelect() {
-    const families = {};
-    for (const key in SCALE_FAMILIES) {
-        families[key] = SCALE_FAMILIES[key].name;
+// Popula o seletor de Modos - Inclui Todos os Modos (21)
+function populateModeSelect() {
+    const modes = {};
+    for (const key in MODE_NAMES) {
+        modes[key] = MODE_NAMES[key];
     }
-    populateSelect('scale-family', families);
-}
-
-// Atualiza o seletor de Modos com base na Família de Escala selecionada
-function updateModeSelect() {
-    const familyKey = document.getElementById('scale-family').value;
-    const modalModeSelect = document.getElementById('modal-mode');
-    
-    modalModeSelect.innerHTML = ''; // Limpa antes de preencher
-
-    if (familyKey && SCALE_FAMILIES[familyKey]) {
-        const modesMap = SCALE_FAMILIES[familyKey].modes;
-        populateSelect('modal-mode', modesMap);
-    }
-    // Se nenhum 'familyKey' for selecionado, o select 'modal-mode' estará vazio, forçando a seleção.
+    populateSelect('modal-mode', modes);
 }
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inicializa os selects da hierarquia
+    // 1. Inicializa os selects
     populateRootSelect();
-    populateFamilySelect();
-    updateModeSelect(); // Popula o modo inicial (vazio)
+    populateModeSelect(); 
     
-    // 2. Listeners de Hierarquia (O CORRIGIDO)
-    document.getElementById('scale-family').addEventListener('change', updateModeSelect);
-
+    // 2. Listeners
     const contextSelect = document.getElementById('tonality-context');
     const tonalSelectsDiv = document.getElementById('tonal-selects');
-    const userNotesInputDiv = document.getElementById('user-notes-input');
     const verticalitySelectDiv = document.getElementById('verticality-select');
 
     contextSelect.addEventListener('change', () => {
         const context = contextSelect.value;
         const isModal = context === 'modal-pura';
-        const isUserNotes = context === 'user-notes';
         const isAtonal = context === 'atonal';
         
         verticalitySelectDiv.style.display = isModal ? 'block' : 'none';
-        tonalSelectsDiv.style.display = (isUserNotes || isAtonal) ? 'none' : 'block';
-        userNotesInputDiv.style.display = isUserNotes ? 'block' : 'none';
-
-        // O seletor de modo é sempre visível quando não é Atonal ou Customizado.
-        document.getElementById('modal-mode-select').style.display = 
-            (isUserNotes || isAtonal) ? 'none' : 'block';
+        tonalSelectsDiv.style.display = isAtonal ? 'none' : 'block';
+        
+        // O seletor de modo é visível sempre que não for Atonal
+        document.getElementById('modal-mode-select').style.display = isAtonal ? 'none' : 'block';
     });
 
     // 3. Listeners de Ação
@@ -188,11 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('apply-transpose').addEventListener('click', () => {
         const value = parseInt(document.getElementById('transpose-value').value);
         if (currentProgression.length > 0 && value !== 0) {
-            const baseRoot = document.getElementById('root-note').value;
+            const baseRoot = currentSettings.rootNote; 
             const newBaseRoot = transposeNote(baseRoot, value);
             
             currentProgression = transposeProgression(currentProgression, value);
-            currentSettings.rootNote = newBaseRoot; 
+            
+            currentSettings.rootNote = newBaseRoot;
             updateResults(currentProgression);
         }
     });
@@ -208,14 +197,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // =======================================================
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
-// [O código deste módulo permanece com a lógica completa do passo anterior]
 // =======================================================
 
-function determineRootAtonal() { /* ... */ }
-function determineRootCustom(customNotes) { /* ... */ }
-function determineRootModal(baseRoot, modeKey) { /* ... */ }
-function determineRootFunctional(baseRoot, prevRoot) { /* ... */ }
-function determineRootJazz(baseRoot, prevRoot) { /* ... */ }
+function determineRootAtonal() {
+    return getRandomElement(NOTES);
+}
+
+function determineRootModal(baseRoot, modeKey) {
+    const baseRootIndex = NOTES.indexOf(baseRoot);
+    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+
+    const diatonicNotes = modeIntervals.map(interval => {
+        const noteIndex = (baseRootIndex + interval) % NOTES.length;
+        return NOTES[noteIndex];
+    });
+
+    const randomIndex = Math.floor(Math.random() * diatonicNotes.length);
+    return diatonicNotes[randomIndex];
+}
+
+function determineRootFunctional(baseRoot, prevRoot) {
+    if (!prevRoot) { return baseRoot; }
+    
+    const prevRootIndex = NOTES.indexOf(prevRoot);
+    const baseRootIndex = NOTES.indexOf(baseRoot);
+    const semitonesFromTonic = (prevRootIndex - baseRootIndex + 12) % 12;
+    
+    let prevFunction = (semitonesFromTonic === 7) ? 'D' : 'T'; 
+
+    const nextFunction = weightedRandomSelection(FUNCTIONAL_RULES[prevFunction]);
+
+    const possibleDegreesRoman = Object.keys(FUNCTION_MAP).filter(degree => FUNCTION_MAP[degree] === nextFunction);
+    const degreeMap = { 'I': 0, 'II': 1, 'III': 2, 'IV': 3, 'V': 4, 'VI': 5, 'VII': 6 };
+    
+    const randomDegreeRoman = possibleDegreesRoman[Math.floor(Math.random() * possibleDegreesRoman.length)];
+    const nextDegreeIntervalIndex = degreeMap[randomDegreeRoman];
+    
+    return getNoteFromDegree(baseRoot, nextDegreeIntervalIndex); 
+}
+
+function determineRootJazz(baseRoot, prevRoot) {
+    const randomChance = Math.random();
+
+    if (randomChance < 0.6) {
+        return determineRootFunctional(baseRoot, prevRoot);
+    } else if (randomChance < 0.8) {
+        const targetDegrees = [1, 2, 3, 4, 5]; 
+        const targetIndex = targetDegrees[Math.floor(Math.random() * targetDegrees.length)];
+        const targetRoot = getNoteFromDegree(baseRoot, targetIndex); 
+        return getNoteFromDegree(targetRoot, 4); 
+    } else {
+        if (prevRoot && prevRoot === getNoteFromDegree(baseRoot, 4)) {
+             const VIndex = NOTES.indexOf(prevRoot);
+             return NOTES[(VIndex + 6) % 12];
+        }
+        return determineRootFunctional(baseRoot, prevRoot); 
+    }
+}
 
 function determineRoot(context, prevRoot, settings) {
     const rootNote = settings.rootNote; 
@@ -223,7 +261,6 @@ function determineRoot(context, prevRoot, settings) {
 
     switch (context) {
         case 'atonal': return determineRootAtonal();
-        case 'user-notes': return determineRootCustom(settings.customNotes);
         case 'modal-pura': return determineRootModal(rootNote, modeKey);
         case 'tonal-fixo': return determineRootFunctional(rootNote, prevRoot);
         case 'tonal-jazz': return determineRootJazz(rootNote, prevRoot);
@@ -341,13 +378,32 @@ function generateProgression() {
     
     const complexityPool = Array.from(document.querySelectorAll('#complexity-settings input:checked')).map(c => c.value);
 
-    // Coleta as configurações do menu suspenso hierárquico
+    let baseRoot = document.getElementById('root-note').value;
+    let modeKey = document.getElementById('modal-mode').value;
+
+    // 1. Resolve o modo aleatório (se selecionado)
+    if (modeKey === 'Aleatorio') {
+        const allModes = Object.keys(ALL_MODES_INTERVALS);
+        modeKey = getRandomElement(allModes);
+    }
+    
+    // 2. Resolve a tonalidade base aleatória (se selecionada)
+    if (baseRoot === 'Aleatorio') {
+        baseRoot = getRandomElement(NOTES);
+    }
+    
+    // Validação para evitar a geração se não houver modos/raiz selecionados
+    if (context !== 'atonal' && (baseRoot === '' || modeKey === '')) {
+        alert('Erro: Por favor, selecione a Tonalidade Base e o Modo Específico (ou "Aleatório").');
+        return;
+    }
+
     currentSettings = {
         context,
-        rootNote: document.getElementById('root-note').value,
-        modeKey: document.getElementById('modal-mode').value,
+        rootNote: baseRoot,
+        modeKey: modeKey,
         verticality: document.getElementById('modal-verticality').value,
-        customNotes: document.getElementById('custom-notes').value,
+        customNotes: '',
         complexityPool,
         includeBass: document.getElementById('c-bass').checked,
         includeTensions: document.getElementById('c-tensions').checked,
@@ -355,12 +411,6 @@ function generateProgression() {
     
     if (structure.length !== numMeasures || structure.some(isNaN)) {
         alert('Erro: A estrutura rítmica deve ter o mesmo número de entradas que o número de compassos.');
-        return;
-    }
-
-    // Validação básica para contextos tonais/modais:
-    if ((context !== 'atonal' && context !== 'user-notes') && (!currentSettings.rootNote || !currentSettings.modeKey)) {
-        alert('Erro: Por favor, selecione a Tonalidade Base e o Modo Específico.');
         return;
     }
 
@@ -434,7 +484,6 @@ function transposeProgression(progressionArray, semitones) {
 
 function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     if (context === 'atonal') return 'Escala Cromática (Todas as 12 notas)';
-    if (context === 'user-notes') return `Notas Customizadas: ${customNotes.toUpperCase()}`;
 
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
     const baseRootIndex = NOTES.indexOf(baseRoot);
@@ -444,11 +493,8 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
         return NOTES[noteIndex];
     }).join(', ');
     
-    const familyKey = document.getElementById('scale-family').value;
-    const family = SCALE_FAMILIES[familyKey];
-    
-    let scaleName = family.modes[modeKey];
-    if (context === 'tonal-jazz') scaleName = `Base Jazz (${scaleName})`;
+    let scaleName = MODE_NAMES[modeKey];
+    if (context === 'tonal-jazz') scaleName = `Base Jazz: ${scaleName}`;
 
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
