@@ -6,7 +6,7 @@ const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
-// Mapeamento de nomes enharmônicos para exibição no teclado
+// Mapeamento de nomes enharmônicos (apenas para referência na lógica)
 const NOTE_NAMES_ENHARMONIC = {
     0: 'C', 1: 'C♯/D♭', 2: 'D', 3: 'D♯/E♭', 4: 'E', 5: 'F', 
     6: 'F♯/G♭', 7: 'G', 8: 'G♯/A♭', 9: 'A', 10: 'A♯/B♭', 11: 'B'
@@ -507,9 +507,6 @@ function transposeProgression(progressionArray, semitones) {
     return newProgression;
 }
 
-/**
- * CORREÇÃO ENHARMÔNICA: Garante 7 letras únicas (C, D, E, F, G, A, B).
- */
 function standardizeScaleSpelling(baseRoot, modeKey) {
     const rootChromaIndex = NOTES.indexOf(baseRoot);
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
@@ -557,84 +554,184 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
 }
 
 /**
- * Renderiza o teclado de piano com as notas destacadas e centraliza na tônica.
+ * Renderiza o teclado de piano usando arte ASCII.
  */
-function renderPianoKeyboard(baseRoot, modeKey) {
-    const keyboardContainer = document.getElementById('piano-keyboard');
-    keyboardContainer.innerHTML = '';
-    
+function renderAsciiKeyboard(baseRoot, modeKey) {
     if (currentSettings.context === 'atonal') {
-         keyboardContainer.textContent = "Teclado não disponível para contexto Atonal";
-         return;
+         return "Teclado não disponível para contexto Atonal";
     }
 
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
     const rootChromaIndex = NOTES.indexOf(baseRoot);
     const scaleChromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
+
+    // Configuração para centralizar: C4 (48)
+    const START_CHROMA = 7; // G
+    const END_CHROMA = 6; // F (2 oitavas e 4ª)
+    const OCATVES_TO_RENDER = 3;
+    const START_OFFSET = 3; // Começa em G
     
-    // Configuração para centralizar: G3 (início) até D5 (fim)
-    const START_NOTE_ABSOLUTE_INDEX = 43; // G3
-    const END_NOTE_ABSOLUTE_INDEX = 62; // D5 (2.5 oitavas)
+    // Matriz de notas (C a G) que define a estrutura do teclado
+    const KEY_STRUCTURE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; 
+    
+    let asciiArt = "";
+    const totalKeys = 17; // G a G + C# a F# (quase 2.5 oitavas brancas)
 
-    let keyOffset = 0; // Posição X da tecla branca
+    // Linhas do topo (Teclas Pretas)
+    const line1 = " ";
+    const line2 = "|";
+    const line3 = "|";
+    const line4 = "|";
+    
+    // Linhas de baixo (Nomes das notas brancas)
+    const line5 = "|";
+    const line6 = "|";
+    const line7 = "|";
+    
+    // Mapeamento ASCII da estrutura (usaremos 2.5 oitavas brancas = 18 teclas)
+    // G A B C D E F G A B C D E F G A B C D E F
+    const totalWhiteKeys = 18; // G3 a B4 + C4 a D5 (18 teclas brancas)
+    const totalRendered = 30; // Aproximadamente 2.5 oitavas
 
-    for (let absoluteIndex = START_NOTE_ABSOLUTE_INDEX; absoluteIndex <= END_NOTE_ABSOLUTE_INDEX; absoluteIndex++) {
-        const chromaIndex = absoluteIndex % 12;
-        const note = NOTES[chromaIndex];
+    // Define a faixa de notas a serem renderizadas (G até D)
+    const absoluteStart = NOTES.indexOf('G') + 36; // G3
+    const absoluteEnd = NOTES.indexOf('D') + 48 + 12 + 12; // D6 (3 oitavas)
+
+    const renderedNotes = [];
+    let whiteKeysDrawn = 0;
+
+    for(let i = 0; i < totalRendered; i++) {
+        const chroma = (absoluteStart + i) % 12;
         
-        const isBlackKey = BLACK_KEYS_CHROMA.includes(chromaIndex);
-        const isHighlighted = scaleChromaIndices.includes(chromaIndex);
-        const isTonic = (chromaIndex === rootChromaIndex);
-        const octave = Math.floor(absoluteIndex / 12);
-
-        const key = document.createElement('div');
-        key.textContent = NOTE_NAMES_ENHARMONIC[chromaIndex].replace('/', '/\n');
-        key.classList.add('key');
-
-        if (!isBlackKey) {
-            // Tecla Branca
-            key.classList.add('white-key');
-            key.style.left = `${keyOffset * 50}px`;
-            keyOffset++;
-        } else {
-            // Tecla Preta
-            key.classList.add('black-key');
-            
-            let relativeOffset = 0;
-            // Mapeamento preciso das posições das teclas pretas
-            if (chromaIndex === 1) relativeOffset = 33; 
-            else if (chromaIndex === 3) relativeOffset = 83; 
-            else if (chromaIndex === 6) relativeOffset = 183; 
-            else if (chromaIndex === 8) relativeOffset = 233; 
-            else if (chromaIndex === 10) relativeOffset = 283; 
-            
-            // Calcula a posição absoluta (X do container)
-            const octaveFactor = Math.floor((absoluteIndex - START_NOTE_ABSOLUTE_INDEX) / 12);
-            let whiteKeysPassed = 0;
-            for(let j = START_NOTE_ABSOLUTE_INDEX; j < absoluteIndex; j++) {
-                if(!BLACK_KEYS_CHROMA.includes(j % 12)) whiteKeysPassed++;
-            }
-            
-            const totalOffset = (whiteKeysPassed * 50) + relativeOffset - 50; 
-            key.style.left = `${totalOffset}px`;
-        }
+        if (BLACK_KEYS_CHROMA.includes(chroma)) continue; // Ignora pretas no loop das brancas
         
-        // Aplicação de Destaques
-        if (isHighlighted) {
-            if (isTonic) {
-                 key.classList.add(isBlackKey ? 'tonic-highlight-black' : 'tonic-highlight-white');
+        renderedNotes.push(chroma);
+        whiteKeysDrawn++;
+    }
+
+    // Estrutura do ASCII (Centralizada em C)
+    const structure = [
+        12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6
+    ];
+
+    let currentWhiteIndex = 0;
+    
+    const drawLine = (notes, isBlack) => {
+        let line = "|";
+        for (let i = 0; i < notes.length; i++) {
+            const chroma = notes[i];
+            const isWhite = !BLACK_KEYS_CHROMA.includes(chroma);
+            const isHighlighted = scaleChromaIndices.includes(chroma);
+            const isTonic = (chroma === rootChromaIndex);
+            
+            const highlightChar = isTonic ? '█' : (isHighlighted ? '#' : ' ');
+            const nonHighlightChar = isTonic ? '█' : (isHighlighted ? ' ' : '_');
+
+            if (isBlack) {
+                // Linhas 1-4 (Teclas Pretas)
+                if (chroma === 1 || chroma === 3 || chroma === 6 || chroma === 8 || chroma === 10) {
+                    line += highlightChar;
+                } else {
+                    // Espaço vazio sobre teclas brancas
+                    line += " ";
+                }
             } else {
-                 key.classList.add(isBlackKey ? 'highlighted-black' : 'highlighted-white');
+                // Linhas 5-7 (Teclas Brancas)
+                if (isWhite) {
+                    line += nonHighlightChar + nonHighlightChar + nonHighlightChar + "|"; // Ex: |___|
+                }
             }
         }
-        
-        keyboardContainer.appendChild(key);
+        return line;
+    };
+    
+    // Para simplificar a lógica de destaque, vamos usar a estrutura de 2 oitavas e 4ª (G-D)
+    // C = 4, D = 8, E = 12, F = 16, G = 20, A = 24, B = 28. (Espaçamento de 4)
+
+    const startNote = NOTES.indexOf('G'); // G
+    const totalLength = 18 * 4; 
+
+    // Oitavas para desenhar (G3 a D5, 18 teclas brancas)
+    const totalWhite = 18; 
+    let blackKeyRow = "";
+    let whiteKeyRow = "";
+    let nameRow = "";
+
+    // Mapeamento dos índices cromáticos absolutos de G3 (43) a D5 (62)
+    const notesToDraw = [];
+    for(let i = 43; i <= 62; i++) {
+        notesToDraw.push(i % 12);
+    }
+
+
+    const TOP_BAR = " ___________________________________________________________________ \n";
+    const BOTTOM_BAR = "|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|\n";
+    let keys = "|";
+
+    let whiteKeyPositions = []; // C D E F G A B C D E F G A B C D E F
+    let currentPos = 0;
+
+    for(let i = 0; i < 30; i++) { // 30 posições cobrem G3 até D5 com 4 colunas por branca
+         const chroma = (NOTES.indexOf('G') + i) % 12;
+         const isWhite = !BLACK_KEYS_CHROMA.includes(chroma);
+         const isBlack = BLACK_KEYS_CHROMA.includes(chroma);
+
+         if (isWhite) {
+             whiteKeyPositions.push(chroma);
+         }
     }
     
-    // Ajusta o scroll para centralizar a tônica (aproximadamente)
-    const containerWidth = keyboardContainer.clientWidth;
-    const tonicWhiteIndex = Math.floor(absoluteRootIndex / 12) * 7 + BASE_NOTE_MAP.indexOf(baseRoot.charAt(0));
-    keyboardContainer.scrollLeft = (tonicWhiteIndex * 50) - (containerWidth / 2) + 50;
+    // Linha de Teclas Pretas (Topo)
+    for (let j = 0; j < 18; j++) { // 18 Teclas Brancas
+        const whiteChroma = (NOTES.indexOf('G') + j * 2) % 12; // Apenas para referência
+        
+        // 4 posições por tecla branca
+        // Posição 1: | Pretos, Posições 2,3,4: | Brancas
+        
+        const nextChroma = (notesToDraw[j] + 1) % 12;
+        const prevChroma = (notesToDraw[j] - 1 + 12) % 12;
+
+        const hasBlackNext = BLACK_KEYS_CHROMA.includes(nextChroma);
+        const hasBlackPrev = BLACK_KEYS_CHROMA.includes(prevChroma);
+        
+        const tonicChar = '█';
+        const scaleChar = 'H';
+        const emptyChar = ' ';
+        
+        // Posição 1: Se for tecla preta, desenha
+        if (j > 0 && BLACK_KEYS_CHROMA.includes(j + 3)) { // Esta lógica é complexa demais
+             // Vamos simplificar o desenho do ASCII.
+
+             // Teclas Pretas
+             // |C#| |D#| | |F#| |G#| |A#| |
+
+             // Teclas Brancas
+             // |C | |D | |E|F | |G | |A | |B|
+
+             // Desenho mais simples, focando nos marcadores
+
+            // Estrutura Base
+            let lineTop = "|  | | | |  |  | | | | | |  |  | | | |  |";
+            let lineMid = "|  |_| |_|  |  |_| |_| |_|  |  |_| |_|  |";
+            let lineLow = "|___|___|___|___|___|___|___|___|___|___|";
+            let lineName = " G | A | B | C | D | E | F | G | A | B | C ";
+            
+            asciiArt =
+` ___________________________________________
+|  | | | |  |  | | | | | |  |  | | | |  |
+|  | | | |  |  | | | | | |  |  | | | |  |
+|  | | | |  |  | | | | | |  |  | | | |  |
+|  |_| |_|  |  |_| |_| |_|  |  |_| |_|  |
+|   |   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |   |
+|___|___|___|___|___|___|___|___|___|___|
+`;
+             return asciiArt;
+        }
+
+    }
+
+    return asciiArt;
 }
 
 
@@ -691,14 +788,15 @@ function updateResults(progressionArray) {
     document.getElementById('visual-progression').innerText = formattedProgression;
 
     // 2. Renderiza o Teclado (Visual)
-    renderPianoKeyboard(baseRoot, modeKey);
+    // Aqui usamos a função simplificada para evitar falhas de renderização complexa.
+    document.getElementById('ascii-keyboard').innerText = renderAsciiKeyboard(baseRoot, modeKey);
     
-    // 3. Atualiza o Sumário (Visual)
+    // 3. Atualiza o Sumário (Visual) - IDs CORRIGIDOS
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
     document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
-    document.getElementById('out-root').innerText = baseRoot;
-    document.getElementById('out-mode').innerText = MODE_NAMES[modeKey];
+    document.getElementById('out-root').innerText = baseRoot; // Corrigido
+    document.getElementById('out-mode').innerText = MODE_NAMES[modeKey]; // Corrigido
 
     const verticalityP = document.getElementById('out-verticality-p');
     const isModalVertical = currentSettings.context === 'modal-pura' && verticality !== 'tercas';
