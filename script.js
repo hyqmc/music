@@ -2,10 +2,8 @@
 // MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL
 // =======================================================
 
-// As 12 notas em notação de Jazz/Cifrada
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-// Mapeamento dos Modos: [intervalos em semitons a partir da raiz]
 const MODES = {
     // === MODOS DA ESCALA MAIOR (JÔNICA) ===
     'major': { intervals: [0, 2, 4, 5, 7, 9, 11], name: 'Jônio' },
@@ -33,7 +31,6 @@ const MODES = {
     'superlocrian': { intervals: [0, 1, 3, 4, 6, 8, 10], name: 'Superlócrio (Alterada)' }, 
 };
 
-// Dicionário de Qualidades por Nível de Complexidade (Módulo 2B)
 const QUALITIES = {
     'Triade': ['Maj', 'm', 'dim'], 
     'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
@@ -42,31 +39,18 @@ const QUALITIES = {
     'Diminuto': ['dim7', 'm7(b5)'], 
 };
 
-// Tensões Alteradas Comuns no Jazz
 const ALTERED_TENSIONS = ['b9', '#9', '#11', 'b13', '#5'];
 
-// --- Mapeamento Funcional (para Tonal Fixo) ---
 const FUNCTION_MAP = {
-    'I': 'T', 'VI': 'T', 'III': 'T', // Tônica
-    'II': 'SD', 'IV': 'SD', // Subdominante
-    'V': 'D', 'VII': 'D' // Dominante
+    'I': 'T', 'VI': 'T', 'III': 'T',
+    'II': 'SD', 'IV': 'SD',
+    'V': 'D', 'VII': 'D'
 };
 
-// Regras de Transição (Próximo Grau) - Usadas no Sorteio Ponderado
 const FUNCTIONAL_RULES = {
-    'T': [
-        { dest: 'SD', chance: 50 },
-        { dest: 'D', chance: 30 },
-        { dest: 'T', chance: 20 }
-    ],
-    'SD': [
-        { dest: 'D', chance: 60 },
-        { dest: 'T', chance: 40 }
-    ],
-    'D': [
-        { dest: 'T', chance: 90 },
-        { dest: 'SD', chance: 10 }
-    ]
+    'T': [ { dest: 'SD', chance: 50 }, { dest: 'D', chance: 30 }, { dest: 'T', chance: 20 } ],
+    'SD': [ { dest: 'D', chance: 60 }, { dest: 'T', chance: 40 } ],
+    'D': [ { dest: 'T', chance: 90 }, { dest: 'SD', chance: 10 } ]
 };
 
 
@@ -74,9 +58,6 @@ const FUNCTIONAL_RULES = {
 // FUNÇÕES AUXILIARES GLOBAIS
 // =======================================================
 
-/**
- * Realiza um sorteio ponderado.
- */
 function weightedRandomSelection(rules) {
     const totalWeight = rules.reduce((sum, rule) => sum + rule.chance, 0);
     let randomNum = Math.random() * totalWeight; 
@@ -90,18 +71,12 @@ function weightedRandomSelection(rules) {
     return rules[rules.length - 1].dest; 
 }
 
-/**
- * Sorteia um elemento de um array simples.
- */
 function getRandomElement(pool) {
     if (pool.length === 0) return '';
     const randomIndex = Math.floor(Math.random() * pool.length);
     return pool[randomIndex];
 }
 
-/**
- * Obtém a nota musical a partir da raiz e do índice de grau.
- */
 function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const modeIntervals = MODES[modeKey].intervals;
@@ -111,9 +86,6 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     return NOTES[noteIndex];
 }
 
-/**
- * Mapeia o intervalo em semitons para a qualidade diatônica base (Jônio).
- */
 function getDiatonicQuality(interval) {
     switch (interval) {
         case 0: case 5: return 'Maj7';
@@ -128,13 +100,39 @@ function getDiatonicQuality(interval) {
 // =======================================================
 // MÓDULO DE CONTROLE DE INTERFACE (Listeners)
 // =======================================================
+
+let currentProgression = []; 
+let currentSettings = {};
+
+function populateModeSelect() {
+    const modalModeSelect = document.getElementById('modal-mode');
+    modalModeSelect.innerHTML = ''; 
+
+    const allModeKeys = Object.keys(MODES);
+
+    NOTES.forEach(root => {
+        allModeKeys.forEach(modeKey => {
+            const modeDetails = MODES[modeKey];
+            
+            const value = `${root}_${modeKey}`;
+            const text = `${root} ${modeDetails.name}`;
+
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = text;
+            modalModeSelect.appendChild(option);
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    populateModeSelect(); // Popula o menu suspenso de modos
+    
     const generateButton = document.getElementById('generate-button');
     const transposeButton = document.getElementById('apply-transpose');
     const contextSelect = document.getElementById('tonality-context');
     const verticalitySelect = document.getElementById('verticality-select');
 
-    // Listener para mostrar/esconder opções modais/tonais
     contextSelect.addEventListener('change', () => {
         const isModal = contextSelect.value === 'modal-pura';
         const isAtonal = contextSelect.value === 'atonal';
@@ -145,14 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateButton.addEventListener('click', generateProgression);
 
-    // Listener de Transposição
     transposeButton.addEventListener('click', () => {
         const value = parseInt(document.getElementById('transpose-value').value);
-        if (currentProgression.length > 0) {
+        if (currentProgression.length > 0 && value !== 0) {
             const baseRoot = currentSettings.tonality.split('_')[0];
             const newBaseRoot = transposeNote(baseRoot, value);
             
-            // Atualiza a progressão e as configurações de tonalidade
             currentProgression = transposeProgression(currentProgression, value);
             currentSettings.tonality = newBaseRoot + '_' + currentSettings.tonality.split('_')[1];
 
@@ -160,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Listener para copiar a cifra
     document.getElementById('copy-button').addEventListener('click', () => {
         const progressionText = document.getElementById('chord-progression').innerText;
         navigator.clipboard.writeText(progressionText).then(() => {
@@ -173,9 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
 // =======================================================
-
-let currentProgression = []; 
-let currentSettings = {};
 
 // --- Módulo 2A: Determinação da Raiz ---
 function determineRootAtonal() {
@@ -199,12 +191,10 @@ function determineRootModal(baseRoot, modeKey) {
 function determineRootFunctional(baseRoot, prevRoot) {
     if (!prevRoot) { return baseRoot; }
     
-    // Simplificação da conversão Nota -> Grau -> Função:
     const prevRootIndex = NOTES.indexOf(prevRoot);
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const semitonesFromTonic = (prevRootIndex - baseRootIndex + 12) % 12;
     
-    // Simplificando: o V grau (7 semitons) é Dominante; outros são Tônica/Subdominante.
     let prevFunction = (semitonesFromTonic === 7) ? 'D' : 'T'; 
 
     const nextFunction = weightedRandomSelection(FUNCTIONAL_RULES[prevFunction]);
@@ -224,17 +214,14 @@ function determineRootJazz(baseRoot, prevRoot) {
     if (randomChance < 0.6) {
         return determineRootFunctional(baseRoot, prevRoot);
     } else if (randomChance < 0.8) {
-        // Dominantes Secundários: V/X
         const targetDegrees = [1, 2, 3, 4, 5]; 
         const targetIndex = targetDegrees[Math.floor(Math.random() * targetDegrees.length)];
         const targetRoot = getNoteFromDegree(baseRoot, targetIndex); 
-        // V grau (4) do target é a nova raiz (Dominante Secundário)
         return getNoteFromDegree(targetRoot, 4); 
     } else {
-        // Substituição Tritonal (SubV)
         if (prevRoot && prevRoot === getNoteFromDegree(baseRoot, 4)) {
              const VIndex = NOTES.indexOf(prevRoot);
-             return NOTES[(VIndex + 6) % 12]; // 6 semitons acima
+             return NOTES[(VIndex + 6) % 12];
         }
         return determineRootFunctional(baseRoot, prevRoot); 
     }
@@ -268,7 +255,6 @@ function determineQuality(root, context, settings) {
         return verticality === 'quartal' ? 'Quartal' : 'Quintal';
     }
 
-    // Lógica Diatônica: Encontra o intervalo em semitons e a qualidade base
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const intervalFromTonic = (rootIndex - baseRootIndex + 12) % 12;
@@ -303,7 +289,7 @@ function determineQuality(root, context, settings) {
 }
 
 
-// --- Módulo 2C: Aplicação de Coloração (Baixos e Tensões) ---
+// --- Módulo 2C: Aplicação de Coloração ---
 function getFunctionalBass(root, baseRoot) {
     const rootIndex = NOTES.indexOf(root);
     const degrees = [];
@@ -311,7 +297,7 @@ function getFunctionalBass(root, baseRoot) {
     degrees.push(root); 
     degrees.push(NOTES[(rootIndex + 4) % 12]);
     degrees.push(NOTES[(rootIndex + 7) % 12]);
-    degrees.push(baseRoot); // Ponto de pedal suave
+    degrees.push(baseRoot);
     
     return getRandomElement(degrees);
 }
@@ -323,19 +309,17 @@ function applyColoring(root, quality, context, settings) {
     let tensions = '';
     let bass = '';
 
-    // Lógica do Baixo Alternativo
     if (includeBass) {
         if (context === 'atonal') {
             bass = NOTES[Math.floor(Math.random() * NOTES.length)];
         } else {
             bass = getFunctionalBass(root, baseRoot);
-            if (context === 'modal-pura') bass = baseRoot; // Força Ponto de Pedal
+            if (context === 'modal-pura') bass = baseRoot; 
         }
         
         if (bass !== root) { bass = `/${bass}`; } else { bass = ''; }
     }
 
-    // Lógica das Tensões Alteradas
     if (includeTensions) {
         if (context === 'atonal') {
             tensions = `(${getRandomElement(ALTERED_TENSIONS)})`;
@@ -353,15 +337,13 @@ function applyColoring(root, quality, context, settings) {
                 }
             }
         } else if (context === 'modal-pura') {
-            tensions = ''; // Proibido
+            tensions = '';
         }
     }
 
     return { tensions, bass };
 }
 
-
-// --- Função Principal de Geração ---
 function generateProgression() {
     const context = document.getElementById('tonality-context').value;
     const numMeasures = parseInt(document.getElementById('num-measures').value);
@@ -398,11 +380,9 @@ function generateProgression() {
             let bass = coloring.bass; 
             let tensions = coloring.tensions; 
 
-            // Regra de Verticalidade Quartal/Quintal
             if (quality.includes('Quartal') || quality.includes('Quintal')) {
                  quality = `^${quality}`; 
                  tensions = '';
-                 // Garante Ponto de Pedal modal, se aplicável
                  if (currentSettings.context === 'modal-pura') bass = `/${currentSettings.tonality.split('_')[0]}`; 
             }
             
@@ -423,7 +403,6 @@ function generateProgression() {
 // MÓDULO 3: PÓS-PROCESSAMENTO E SAÍDA
 // =======================================================
 
-// Transpõe uma nota musical
 function transposeNote(note, steps) {
     const index = NOTES.indexOf(note);
     if (index === -1) return note; 
@@ -432,7 +411,6 @@ function transposeNote(note, steps) {
     return NOTES[newIndex];
 }
 
-// [MÓDULO 3A] Transpõe toda a progressão
 function transposeProgression(progressionArray, semitones) {
     if (semitones === 0) return progressionArray;
     const newProgression = [];
@@ -456,7 +434,6 @@ function transposeProgression(progressionArray, semitones) {
     return newProgression;
 }
 
-// [MÓDULO 3B] Analisa e sugere a escala
 function getSuggestedScale(baseRoot, modeKey, context) {
     if (context === 'atonal') return 'Escala Cromática (Todas as 12 notas)';
 
@@ -474,7 +451,6 @@ function getSuggestedScale(baseRoot, modeKey, context) {
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
 
-// Atualiza a interface com os resultados finais
 function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
     const progressionPre = document.getElementById('chord-progression');
