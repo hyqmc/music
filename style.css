@@ -1,6 +1,121 @@
-/* style.css: ADIÇÕES E CORREÇÕES */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
 
-/* ... [MANTER TODO O CSS ANTIGO ATÉ A SEÇÃO DE TECLADO] ... */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #007bff;
+}
+
+main {
+    max-width: 1200px; /* Aumentado para melhor visualização do layout de 3 colunas */
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.controls-container, .results-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.control-group, .result-box {
+    flex: 1 1 calc(33% - 20px);
+    background: #fcfcfc;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+/* O primeiro bloco de resultado deve ocupar a largura total no layout otimizado */
+.result-box.result-main-output {
+    flex: 1 1 100%;
+}
+
+h2 {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+    margin-top: 0;
+}
+
+h3 {
+    color: #333;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+input[type="number"], input[type="text"], select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+#generate-button {
+    width: 100%;
+    margin-bottom: 30px;
+    background-color: #007bff;
+}
+
+pre {
+    background-color: #eee;
+    padding: 15px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    font-size: 1.2em;
+    border: 1px dashed #aaa;
+}
+
+.analysis-visual-group {
+    padding: 15px 0;
+    border-top: 1px solid #eee;
+    margin-top: 15px;
+}
+
+.generator-summary {
+    margin-top: 20px;
+    padding: 10px;
+    background: #f7f7f7;
+    border-left: 5px solid #007bff;
+}
 
 /* --- Estilo de Teclado de Piano --- */
 
@@ -9,10 +124,11 @@
     position: relative;
     height: 120px;
     margin: 20px 0;
-    overflow: hidden;
+    overflow-x: scroll; /* Permite a visualização de teclas fora do contêiner */
     width: 100%; 
-    max-width: 525px; /* Limite de visualização para 2.5 oitavas */
+    max-width: 900px; 
     border: 1px solid #333;
+    white-space: nowrap;
 }
 
 .key {
@@ -28,8 +144,9 @@
     padding-bottom: 5px;
     box-sizing: border-box;
     cursor: default;
-    white-space: pre-wrap; /* Permite que C#/Db quebre a linha */
+    white-space: pre-wrap;
     line-height: 1;
+    text-align: center;
 }
 
 .white-key {
@@ -43,39 +160,49 @@
 .black-key {
     width: 30px;
     height: 60%;
-    background-color: #333;
+    background-color: #666; /* Cinza escuro para teclas não usadas */
     color: #f9f9f9;
     z-index: 2;
 }
 
-/* Base de Destaque */
+/* --- Paleta de Cores Aprimorada (Escala) --- */
+
+/* Notas da Escala (Brancas) */
 .key.highlighted-white {
-    background-color: #A9D0F5; /* Azul claro para notas brancas na escala */
+    background-color: #6495ED; /* Azul Claro/Padrão de Escala */
     color: #111;
     font-weight: bold;
 }
 
+/* Notas da Escala (Pretas) */
 .key.highlighted-black {
-    background-color: #8B0000; /* Vermelho escuro para notas pretas na escala */
+    background-color: #004D99; /* Azul Escuro/Escala */
     color: white;
     font-weight: bold;
 }
 
 /* Destaque da Tônica (Sobrepõe o destaque de escala) */
-.key.tonic-highlight {
-    background-color: #FFD700; /* Ouro/Amarelo para a Raiz */
-    color: black !important;
-    box-shadow: 0 0 10px #FFD700;
-    border: 2px solid #CCAA00;
+.key.tonic-highlight-white {
+    background-color: #007bff; /* Azul Primário/Destaque (Tônica Branca) */
+    color: white !important;
+    box-shadow: 0 0 8px #007bff;
+    border: 2px solid #0056b3;
+    z-index: 3;
+}
+.key.tonic-highlight-black {
+    background-color: #003366; /* Azul Primário Escuro/Destaque (Tônica Preta) */
+    color: white !important;
+    box-shadow: 0 0 8px #007bff;
+    border: 2px solid #0056b3;
+    z-index: 3;
 }
 
-/* Destaque das oitavas de baixo contraste (opcional, para visualização) 
-.key.low-contrast {
-    opacity: 0.6; 
+/* Responsividade */
+@media (max-width: 992px) {
+    .control-group, .result-box:not(.result-main-output) {
+        flex: 1 1 calc(50% - 10px);
+    }
 }
-*/
-
-/* Responsividade básica */
 @media (max-width: 768px) {
     .control-group, .result-box {
         flex: 1 1 100%;
