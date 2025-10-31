@@ -3,6 +3,7 @@
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; // Para coerência enharmônica
 
 // Mapeamento de nomes de modos para exibição (Completo com 7 graus por escala)
 const MODE_NAMES = {
@@ -97,14 +98,6 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     return NOTES[noteIndex];
 }
 
-function getDiatonicQuality(interval) {
-    switch (interval) {
-        case 0: case 5: return 'Maj7'; case 2: case 4: case 9: return 'm7';
-        case 7: return '7'; case 11: return 'm7(b5)';
-        default: return 'Maj7';
-    }
-}
-
 
 // =======================================================
 // MÓDULO DE INICIALIZAÇÃO E LISTENERS
@@ -117,13 +110,11 @@ function populateSelect(selectId, optionsMap) {
     const select = document.getElementById(selectId);
     select.innerHTML = '';
     
-    // Adiciona a opção "Aleatório" no topo
     let randomOption = document.createElement('option');
     randomOption.value = 'Aleatorio';
     randomOption.textContent = 'Aleatório';
     select.appendChild(randomOption);
     
-    // Adiciona as opções de notas/modos
     for (const value in optionsMap) {
         let option = document.createElement('option');
         option.value = value;
@@ -180,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('copy-button').addEventListener('click', () => {
-        // Agora copia o conteúdo UNIFICADO do bloco <pre>
         const progressionText = document.getElementById('chord-progression').innerText;
         navigator.clipboard.writeText(progressionText).then(() => {
             alert('Progressão copiada!');
@@ -197,10 +187,6 @@ function determineRootAtonal() {
     return getRandomElement(NOTES);
 }
 
-/**
- * CORREÇÃO IMPLEMENTADA: Adiciona prevRoot e lógica de estase/tonic-return
- * para garantir um centro tonal no contexto modal.
- */
 function determineRootModal(baseRoot, prevRoot, modeKey) {
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
@@ -210,19 +196,14 @@ function determineRootModal(baseRoot, prevRoot, modeKey) {
         return NOTES[noteIndex];
     });
 
-    if (!prevRoot) { return baseRoot; } // Sempre começa na Tônica
+    if (!prevRoot) { return baseRoot; }
     
-    // 50% de chance de mover (para estase) ou voltar à tônica
     if (Math.random() < 0.5) {
-        // 40% de chance de ir para a Tônica, 60% para qualquer outra diatônica
         if (Math.random() < 0.4) {
             return baseRoot;
         }
-        // Retorna qualquer raiz diatônica aleatória
         return getRandomElement(diatonicNotes);
     }
-
-    // 50% de chance de manter a raiz anterior (Estase Modal)
     return prevRoot;
 }
 
@@ -500,7 +481,7 @@ function generateProgression() {
 
 
 // =======================================================
-// MÓDULO 3: PÓS-PROCESSAMENTO E SAÍDA
+// MÓDULO 3: PÓS-PROCESSAMENTO E SAÍDA (FINAL)
 // =======================================================
 
 function transposeNote(note, steps) {
@@ -534,16 +515,49 @@ function transposeProgression(progressionArray, semitones) {
     return newProgression;
 }
 
+/**
+ * Corrige o problema enharmônico, garantindo 7 letras únicas (C, D, E, F, G, A, B)
+ * para a notação da escala.
+ */
+function standardizeScaleSpelling(baseRoot, modeKey) {
+    const baseLetters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+    const rootChromaIndex = NOTES.indexOf(baseRoot);
+    
+    const chromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
+    
+    const rootLetter = baseRoot.charAt(0);
+    const rootLetterIndex = baseLetters.indexOf(rootLetter);
+    
+    const finalNotes = [];
+
+    for (let i = 0; i < 7; i++) {
+        const targetChromaIndex = chromaIndices[i];
+        const expectedLetter = baseLetters[(rootLetterIndex + i) % 7];
+        
+        let naturalIndex = NOTES.indexOf(expectedLetter);
+        
+        let diff = (targetChromaIndex - naturalIndex + 12) % 12;
+        if (diff > 6) diff -= 12;
+
+        let spelledNote = expectedLetter;
+
+        if (diff === 1) spelledNote += '#';
+        else if (diff === 2) spelledNote += '##';
+        else if (diff === -1) spelledNote += 'b';
+        else if (diff === -2) spelledNote += 'bb';
+
+        finalNotes.push(spelledNote);
+    }
+
+    return finalNotes.join(', ');
+}
+
+
 function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     if (context === 'atonal') return 'Escala Cromática (Todas as 12 notas)';
 
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
-    const baseRootIndex = NOTES.indexOf(baseRoot);
-
-    const notes = modeIntervals.map(interval => {
-        const noteIndex = (baseRootIndex + interval) % NOTES.length;
-        return NOTES[noteIndex];
-    }).join(', ');
+    const notes = standardizeScaleSpelling(baseRoot, modeKey);
     
     let scaleName = MODE_NAMES[modeKey];
     if (context === 'tonal-jazz') scaleName = `Base Jazz: ${scaleName}`;
@@ -565,8 +579,12 @@ function createUnifiedOutput(progressionArray, settings) {
     
     let output = '';
     
-    // --- CABEÇALHO ---
-    output += `// ANÁLISE HARMÔNICA\n`;
+    // --- PROGRESSÃO (First) ---
+    output += `// PROGRESSÃO\n`;
+    output += formattedProgression;
+    
+    // --- GERADORES (Second, with new header) ---
+    output += `\n// GERADORES\n`;
     output += `Contexto: ${context.replace('-', ' ')}\n`;
     
     if (context !== 'atonal') {
@@ -577,15 +595,11 @@ function createUnifiedOutput(progressionArray, settings) {
             output += `Verticalidade: ${verticality}\n`;
         }
         
-        // Inclui a escala sugerida
+        // Inclui a escala sugerida (apenas as notas)
         output += `Escala Sugerida: ${suggestedScaleText.split(': ')[1]}\n`;
     } else {
          output += `Escala Sugerida: ${suggestedScaleText}\n`;
     }
-    
-    // --- PROGRESSÃO ---
-    output += `\n// PROGRESSÃO\n`;
-    output += formattedProgression;
     
     return output;
 }
@@ -595,7 +609,6 @@ function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
     resultsDiv.style.display = 'block';
 
-    // Gera a saída completa para o campo <pre>
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 
@@ -616,8 +629,10 @@ function updateResults(progressionArray) {
     const verticalityP = document.getElementById('out-verticality-p');
     const isModalVertical = currentSettings.context === 'modal-pura' && currentSettings.verticality !== 'tercas';
     
-    verticalityP.style.display = isModalVertical ? 'block' : 'none';
+    verticalityP.style.display = 'block';
     if (isModalVertical) {
         document.getElementById('out-verticality').innerText = currentSettings.verticality;
+    } else {
+        verticalityP.style.display = 'none';
     }
 }
