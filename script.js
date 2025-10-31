@@ -4,48 +4,29 @@
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
+const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; // Índices cromáticos (C=0)
 
-// Mapeamento de nomes de modos para exibição (Completo com 7 graus por escala)
 const MODE_NAMES = {
-    // Diatônica Maior (7 Modos)
-    'major': 'Jônio (Maior)',
-    'dorian': 'Dórico',
-    'phrygian': 'Frígio',
-    'lydian': 'Lídio',
-    'mixolydian': 'Mixolídio',
-    'aeolian': 'Eólio (Menor Natural)',
-    'locrian': 'Lócrio',
-
-    // Menor Harmônica (7 Modos)
-    'harmonic_minor': 'Menor Harmônica',
-    'locrian_sharp6': 'Lócrio ♯6',
-    'ionian_sharp5': 'Jônio ♯5',
-    'dorian_sharp4': 'Dórico ♯4 (Ukrainiana)',
-    'phrygian_dominant': 'Frígio Dominante',
-    'lydian_sharp2': 'Lídio ♯2',
+    'major': 'Jônio (Maior)', 'dorian': 'Dórico', 'phrygian': 'Frígio', 'lydian': 'Lídio',
+    'mixolydian': 'Mixolídio', 'aeolian': 'Eólio (Menor Natural)', 'locrian': 'Lócrio',
+    'harmonic_minor': 'Menor Harmônica', 'locrian_sharp6': 'Lócrio ♯6',
+    'ionian_sharp5': 'Jônio ♯5', 'dorian_sharp4': 'Dórico ♯4 (Ukrainiana)',
+    'phrygian_dominant': 'Frígio Dominante', 'lydian_sharp2': 'Lídio ♯2',
     'superlocrian_bb7': 'Superlócrio ♭♭7',
-
-    // Menor Melódica Ascendente (Jazz) (7 Modos)
-    'melodic_minor': 'Menor Melódica (Jazz)',
-    'dorian_flat2': 'Dórico ♭2',
-    'lydian_sharp5': 'Lídio ♯5',
-    'lydian_flat7': 'Lídio ♭7',
-    'mixolydian_flat6': 'Mixolídio ♭6',
-    'locrian_sharp2': 'Lócrio ♯2',
+    'melodic_minor': 'Menor Melódica (Jazz)', 'dorian_flat2': 'Dórico ♭2',
+    'lydian_sharp5': 'Lídio ♯5', 'lydian_flat7': 'Lídio ♭7',
+    'mixolydian_flat6': 'Mixolídio ♭6', 'locrian_sharp2': 'Lócrio ♯2',
     'superlocrian': 'Superlócrio (Alterada)',
 };
 
-// Mapeamento COMPLETO dos modos com seus INTERVALOS (semitons)
 const ALL_MODES_INTERVALS = {
     'major': [0, 2, 4, 5, 7, 9, 11], 'dorian': [0, 2, 3, 5, 7, 9, 10], 'phrygian': [0, 1, 3, 5, 7, 8, 10],
     'lydian': [0, 2, 4, 6, 7, 9, 11], 'mixolydian': [0, 2, 4, 5, 7, 9, 10], 'aeolian': [0, 2, 3, 5, 7, 8, 10],
     'locrian': [0, 1, 3, 5, 6, 8, 10],
-
     'harmonic_minor': [0, 2, 3, 5, 7, 8, 11], 'locrian_sharp6': [0, 1, 3, 5, 6, 9, 10],
     'ionian_sharp5': [0, 2, 4, 5, 8, 9, 11], 'dorian_sharp4': [0, 2, 3, 6, 7, 9, 10], 
     'phrygian_dominant': [0, 1, 4, 5, 7, 8, 10], 'lydian_sharp2': [0, 3, 4, 6, 7, 9, 11],
     'superlocrian_bb7': [0, 1, 3, 4, 6, 8, 9], 
-
     'melodic_minor': [0, 2, 3, 5, 7, 9, 11], 'dorian_flat2': [0, 1, 3, 5, 7, 9, 10],
     'lydian_sharp5': [0, 2, 4, 6, 8, 9, 11], 'lydian_flat7': [0, 2, 4, 6, 7, 9, 10],
     'mixolydian_flat6': [0, 2, 4, 5, 7, 8, 10], 'locrian_sharp2': [0, 2, 3, 5, 6, 8, 10],
@@ -53,13 +34,10 @@ const ALL_MODES_INTERVALS = {
 };
 
 const QUALITIES = {
-    'Triade': ['Maj', 'm', 'dim'], 
-    'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
+    'Triade': ['Maj', 'm', 'dim'], 'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
     'Extensao': ['Maj9', 'm9', '9', 'Maj13', 'm13', '13', 'm11'],
-    'Suspenso': ['sus2', 'sus4', '7sus4'], 
-    'Diminuto': ['dim7', 'm7(b5)'], 
+    'Suspenso': ['sus2', 'sus4', '7sus4'], 'Diminuto': ['dim7', 'm7(b5)'], 
 };
-
 const ALTERED_TENSIONS = ['b9', '#9', '#11', 'b13', '#5'];
 const FUNCTION_MAP = { 'I': 'T', 'VI': 'T', 'III': 'T', 'II': 'SD', 'IV': 'SD', 'V': 'D', 'VII': 'D' };
 const FUNCTIONAL_RULES = {
@@ -524,8 +502,7 @@ function transposeProgression(progressionArray, semitones) {
 }
 
 /**
- * Corrige o problema enharmônico, garantindo 7 letras únicas (C, D, E, F, G, A, B)
- * para a notação da escala, eliminando duplicação de letras e notação inconsistente.
+ * CORREÇÃO ENHARMÔNICA: Garante 7 letras únicas (C, D, E, F, G, A, B).
  */
 function standardizeScaleSpelling(baseRoot, modeKey) {
     const rootChromaIndex = NOTES.indexOf(baseRoot);
@@ -542,12 +519,10 @@ function standardizeScaleSpelling(baseRoot, modeKey) {
         const targetChromaIndex = chromaIndices[i];
         const expectedLetter = BASE_NOTE_MAP[(rootLetterIndex + i) % 7];
         
-        // Encontra o índice cromático da versão natural da letra esperada
         let naturalIndex = NOTES.indexOf(expectedLetter);
         
         let diff = (targetChromaIndex - naturalIndex + 12) % 12;
         
-        // Ajusta a diferença para usar o mínimo de acidentes (-2 a +2)
         if (diff > 6) diff -= 12;
 
         let spelledNote = expectedLetter;
@@ -576,6 +551,63 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
 }
 
 /**
+ * Renderiza o teclado de piano com as notas destacadas.
+ */
+function renderPianoKeyboard(baseRoot, modeKey) {
+    const keyboardContainer = document.getElementById('piano-keyboard');
+    keyboardContainer.innerHTML = '';
+    
+    if (currentSettings.context === 'atonal') {
+         keyboardContainer.textContent = "Teclado não disponível para contexto Atonal";
+         return;
+    }
+
+    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+    const rootChromaIndex = NOTES.indexOf(baseRoot);
+
+    const scaleChromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
+
+    let keyOffset = 0; // Posição X da tecla branca
+
+    for (let i = 0; i < 21; i++) { // Renderiza 3 oitavas (para cobrir todas as notas)
+        const chromaIndex = i % 12;
+        const note = NOTES[chromaIndex];
+        const isBlackKey = BLACK_KEYS_CHROMA.includes(chromaIndex);
+        const isHighlighted = scaleChromaIndices.includes(chromaIndex);
+        
+        const key = document.createElement('div');
+        key.textContent = note.replace('b', '♭').replace('#', '♯');
+        key.classList.add('key');
+
+        const octaveOffset = Math.floor(i / 7) * 50 * 7; // Múltiplo de 350px por oitava
+
+        if (!isBlackKey) {
+            key.classList.add('white-key');
+            key.style.left = `${keyOffset * 50}px`;
+            keyOffset++;
+        } else {
+            key.classList.add('black-key');
+            // Mapeamento preciso das posições das teclas pretas
+            let relativeOffset = 0;
+            if (chromaIndex === 1) relativeOffset = 33; 
+            else if (chromaIndex === 3) relativeOffset = 83; 
+            else if (chromaIndex === 6) relativeOffset = 183; 
+            else if (chromaIndex === 8) relativeOffset = 233; 
+            else if (chromaIndex === 10) relativeOffset = 283; 
+            
+            key.style.left = `${relativeOffset + octaveOffset}px`;
+        }
+        
+        if (isHighlighted) {
+            key.classList.add(isBlackKey ? 'highlighted-black' : 'highlighted-white');
+        }
+        
+        keyboardContainer.appendChild(key);
+    }
+}
+
+
+/**
  * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
  */
 function createUnifiedOutput(progressionArray, settings) {
@@ -589,11 +621,11 @@ function createUnifiedOutput(progressionArray, settings) {
     
     let output = '';
     
-    // --- PROGRESSÃO (Primeiro bloco) ---
+    // --- PROGRESSÃO (Primeiro bloco de cópia) ---
     output += `// PROGRESSÃO\n`;
     output += formattedProgression;
     
-    // --- GERADORES (Segundo bloco, renomeado) ---
+    // --- GERADORES (Segundo bloco de cópia) ---
     output += `\n// GERADORES\n`;
     output += `Contexto: ${context.replace('-', ' ')}\n`;
     
@@ -617,33 +649,36 @@ function createUnifiedOutput(progressionArray, settings) {
 
 function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
-    resultsDiv.style.display = 'block';
+    resultsDiv.style.display = 'flex';
 
+    const baseRoot = currentSettings.rootNote;
+    const modeKey = currentSettings.modeKey;
+    const verticality = currentSettings.verticality;
+
+    // 1. Atualiza a Saída de Cópia (Bloco 3)
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 
-    // --- Atualização da ANÁLISE na interface (feedback visual) ---
+    // 2. Atualiza a Progressão Visível (Bloco 1)
+    const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
+    document.getElementById('visual-progression').innerText = formattedProgression;
+
+    // 3. Renderiza o Teclado (Visual)
+    renderPianoKeyboard(baseRoot, modeKey);
     
-    const baseRoot = currentSettings.rootNote;
-    const modeKey = currentSettings.modeKey;
-    
+    // 4. Atualiza o Sumário (Visual)
+    const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
+    document.getElementById('out-scale-name').innerText = `${suggestedScaleName} (${baseRoot})`;
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
-    
-    // Usando a notação corrigida para o feedback visual
-    document.getElementById('out-scale').innerText = getSuggestedScale(
-        baseRoot, 
-        modeKey, 
-        currentSettings.context, 
-        currentSettings.customNotes
-    );
-    
+    document.getElementById('out-root').innerText = baseRoot;
+    document.getElementById('out-mode').innerText = MODE_NAMES[modeKey];
+
     const verticalityP = document.getElementById('out-verticality-p');
-    const isModalVertical = currentSettings.context === 'modal-pura' && currentSettings.verticality !== 'tercas';
+    const isModalVertical = currentSettings.context === 'modal-pura' && verticality !== 'tercas';
     
-    // Exibe a verticalidade se for modal e não for terças
     if (isModalVertical) {
         verticalityP.style.display = 'block';
-        document.getElementById('out-verticality').innerText = currentSettings.verticality;
+        document.getElementById('out-verticality').innerText = verticality;
     } else {
         verticalityP.style.display = 'none';
     }
