@@ -34,9 +34,13 @@ const ALL_MODES_INTERVALS = {
 };
 
 const QUALITIES = {
-    'Triade': ['Maj', 'm', 'dim'], 'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
+    'Triade': ['Maj', 'm', 'dim'], 
+    'Setima': ['Maj7', 'm7', '7', 'mMaj7'], 
     'Extensao': ['Maj9', 'm9', '9', 'Maj13', 'm13', '13', 'm11'],
-    'Suspenso': ['sus2', 'sus4', '7sus4'], 'Diminuto': ['dim7', 'm7(b5)'], 
+    'Suspenso': ['sus2', 'sus4', '7sus4'], 
+    'Diminuto': ['dim7', 'm7(b5)'],
+    'Aumentado': ['Aug', 'Maj7(#5)'], // NOVO
+    'Power': ['5'], // NOVO
 };
 const ALTERED_TENSIONS = ['b9', '#9', '#11', 'b13', '#5'];
 const FUNCTION_MAP = { 'I': 'T', 'VI': 'T', 'III': 'T', 'II': 'SD', 'IV': 'SD', 'V': 'D', 'VII': 'D' };
@@ -289,6 +293,18 @@ function determineQuality(root, context, settings) {
         return verticality === 'quartal' ? 'Quartal' : 'Quintal';
     }
 
+    const sortedLevel = getRandomElement(complexityPool);
+
+    // --- Lógica para os novos tipos que independem da qualidade diatônica ---
+    if (sortedLevel === 'Power') {
+        return '5'; 
+    }
+    if (sortedLevel === 'Aumentado') {
+        return getRandomElement(QUALITIES['Aumentado']);
+    }
+    
+    // --- Lógica Diatônica (para Triade, Setima, Extensao, Suspenso, Diminuto) ---
+
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const semitonesFromRoot = (rootIndex - baseRootIndex + 12) % 12;
@@ -299,8 +315,6 @@ function determineQuality(root, context, settings) {
     if (rootIntervalIndex !== -1) {
         baseQuality = constructDiatonicQuality(modeKey, rootIntervalIndex);
     }
-
-    const sortedLevel = getRandomElement(complexityPool);
 
     if (sortedLevel === 'Triade') {
         if (baseQuality.includes('Maj7') || baseQuality === 'Maj') return 'Maj';
@@ -348,6 +362,11 @@ function applyColoring(root, quality, context, settings) {
     
     let tensions = '';
     let bass = '';
+
+    // Power Chords não devem ter extensões/tensões
+    if (quality === '5') {
+        return { tensions: '', bass: '' };
+    }
 
     if (includeBass) {
         if (context === 'atonal') {
@@ -591,8 +610,6 @@ function updateResults(progressionArray) {
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
     document.getElementById('visual-progression').innerText = formattedProgression;
     
-    // (Ponto 2: Renderização do Teclado removido)
-
     // 3. Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
     document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
