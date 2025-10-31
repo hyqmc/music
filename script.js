@@ -148,7 +148,6 @@ function populateModeSelect() {
     populateSelect('modal-mode', modes);
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inicializa os selects
     populateRootSelect();
@@ -167,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
         verticalitySelectDiv.style.display = isModal ? 'block' : 'none';
         tonalSelectsDiv.style.display = isAtonal ? 'none' : 'block';
         
-        // O seletor de modo é visível sempre que não for Atonal
         document.getElementById('modal-mode-select').style.display = isAtonal ? 'none' : 'block';
     });
 
@@ -199,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
 // =======================================================
 
+// --- Módulo 2A: Determinação da Raiz ---
 function determineRootAtonal() {
     return getRandomElement(NOTES);
 }
@@ -268,10 +267,60 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
+// --- Módulo 2B: Determinação da Qualidade (Corrigido para Coerência Diatônica) ---
+
+/**
+ * Constrói a qualidade diatônica base (Maj7, m7, 7, etc.) do acorde
+ * usando os intervalos DO MODO ESPECÍFICO (a correção central).
+ */
+function constructDiatonicQuality(modeKey, rootIntervalIndex) {
+    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+    
+    // Obter o intervalo cromático (0-11) para 3ª, 5ª e 7ª do acorde (em relação à raiz do acorde)
+    const getChromaticInterval = (degreeIndex) => {
+        const indexInMode = (rootIntervalIndex + degreeIndex) % 7;
+        const interval = modeIntervals[indexInMode];
+        const rootInterval = modeIntervals[rootIntervalIndex];
+        return (interval - rootInterval + 12) % 12; // Transpõe para que a raiz do acorde seja 0
+    };
+
+    const third = getChromaticInterval(2); // 3ª
+    const fifth = getChromaticInterval(4); // 5ª
+    const seventh = getChromaticInterval(6); // 7ª
+
+    let quality = '';
+
+    // 1. Determina a Terça
+    if (third === 3) { quality = 'm'; } // menor
+    else if (third === 4) { quality = 'Maj'; } // maior
+    else { return 'sus'; } // Deveria ser tratado pelo pool de complexidade
+
+    // 2. Determina a Quinta
+    if (fifth === 6) { quality += '(b5)'; } // diminuta
+    else if (fifth === 8) { quality += '(#5)'; } // aumentada
+
+    // 3. Determina a Sétima
+    if (seventh === 10) { quality += '7'; } // menor
+    else if (seventh === 11) { quality += 'Maj7'; } // maior
+    
+    // 4. Pós-processamento e limpeza para notação padrão
+    
+    // Se a qualidade já tem 7 ou Maj7, remove o Maj da tríade, senão mantém
+    if (quality.includes('7') || quality.includes('Maj7')) {
+        // Ex: mMaj7 (como na Melódica)
+        return quality.replace('Maj', ''); 
+    }
+    
+    // Tríade
+    return quality.replace('Maj', ''); 
+}
+
+
 function determineQuality(root, context, settings) {
     const complexityPool = settings.complexityPool;
     const verticality = settings.verticality;
     const baseRoot = settings.rootNote;
+    const modeKey = settings.modeKey; // Modo específico
 
     if (context === 'atonal') {
         const allQualities = complexityPool.flatMap(level => QUALITIES[level] || []);
@@ -282,17 +331,28 @@ function determineQuality(root, context, settings) {
         return verticality === 'quartal' ? 'Quartal' : 'Quintal';
     }
 
+    // --- Usa o Modo para garantir Coerência Diatônica ---
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
-    const intervalFromTonic = (rootIndex - baseRootIndex + 12) % 12;
-    let baseQuality = getDiatonicQuality(intervalFromTonic);
+    const semitonesFromRoot = (rootIndex - baseRootIndex + 12) % 12;
+    
+    let rootIntervalIndex = ALL_MODES_INTERVALS[modeKey].indexOf(semitonesFromRoot);
+
+    let baseQuality = '7'; // Fallback para substituições não diatônicas (Jazz)
+    if (rootIntervalIndex !== -1) {
+        // Usa a lógica CORRIGIDA: constrói a qualidade baseada na escala do modo
+        baseQuality = constructDiatonicQuality(modeKey, rootIntervalIndex);
+    }
 
     const sortedLevel = getRandomElement(complexityPool);
 
+    // [Restante da lógica de Complexidade é mantida, usando baseQuality]
+    
     if (sortedLevel === 'Triade') {
-        if (baseQuality.includes('Maj7')) return 'Maj';
-        if (baseQuality.includes('m7')) return 'm';
-        return baseQuality;
+        if (baseQuality.includes('Maj7') || baseQuality === 'Maj') return 'Maj';
+        if (baseQuality.includes('m7') || baseQuality === 'm') return 'm';
+        if (baseQuality.includes('(b5)')) return 'dim'; // Ex: m7(b5) -> dim
+        return baseQuality.replace('7', '');
     }
     
     if (sortedLevel === 'Extensao') {
@@ -301,13 +361,13 @@ function determineQuality(root, context, settings) {
 
         if (baseQuality.startsWith('m')) { extension = '9'; }
         
-        if (baseQuality === '7') { return extension; }
+        if (baseQuality === '7' || baseQuality.includes('Maj7')) { return baseQuality.replace('7', extension).replace('Maj', 'Maj'); }
         return baseQuality.replace('7', '') + extension;
     }
     
     if (sortedLevel === 'Suspenso') {
         const susQualities = QUALITIES['Suspenso'];
-        if (baseQuality === '7' || baseQuality === 'Maj7') {
+        if (baseQuality.includes('7') || baseQuality.includes('Maj')) {
             return getRandomElement(susQualities);
         }
     }
