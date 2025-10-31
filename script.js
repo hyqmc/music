@@ -97,6 +97,14 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     return NOTES[noteIndex];
 }
 
+function getDiatonicQuality(interval) {
+    switch (interval) {
+        case 0: case 5: return 'Maj7'; case 2: case 4: case 9: return 'm7';
+        case 7: return '7'; case 11: return 'm7(b5)';
+        default: return 'Maj7';
+    }
+}
+
 
 // =======================================================
 // MÓDULO DE INICIALIZAÇÃO E LISTENERS
@@ -172,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('copy-button').addEventListener('click', () => {
+        // Agora copia o conteúdo UNIFICADO do bloco <pre>
         const progressionText = document.getElementById('chord-progression').innerText;
         navigator.clipboard.writeText(progressionText).then(() => {
             alert('Progressão copiada!');
@@ -183,8 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
 // =======================================================
-
-// --- Módulo 2A: Determinação da Raiz ---
 
 function determineRootAtonal() {
     return getRandomElement(NOTES);
@@ -203,8 +210,10 @@ function determineRootModal(baseRoot, prevRoot, modeKey) {
         return NOTES[noteIndex];
     });
 
-    // Se for o primeiro acorde, ou 50% de chance de mover (para estase)
-    if (!prevRoot || Math.random() < 0.5) {
+    if (!prevRoot) { return baseRoot; } // Sempre começa na Tônica
+    
+    // 50% de chance de mover (para estase) ou voltar à tônica
+    if (Math.random() < 0.5) {
         // 40% de chance de ir para a Tônica, 60% para qualquer outra diatônica
         if (Math.random() < 0.4) {
             return baseRoot;
@@ -263,8 +272,7 @@ function determineRoot(context, prevRoot, settings) {
 
     switch (context) {
         case 'atonal': return determineRootAtonal();
-        // Chamada Corrigida: Passando o prevRoot
-        case 'modal-pura': return determineRootModal(rootNote, prevRoot, modeKey); 
+        case 'modal-pura': return determineRootModal(rootNote, prevRoot, modeKey);
         case 'tonal-fixo': return determineRootFunctional(rootNote, prevRoot);
         case 'tonal-jazz': return determineRootJazz(rootNote, prevRoot);
         default: return NOTES[0];
@@ -273,41 +281,31 @@ function determineRoot(context, prevRoot, settings) {
 
 // --- Módulo 2B: Determinação da Qualidade (Lógica Diatônica) ---
 
-/**
- * Constrói a qualidade diatônica base (Maj7, m7, 7, etc.) do acorde
- * usando os intervalos DO MODO ESPECÍFICO.
- */
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
     
-    // Obter o intervalo cromático (0-11) para 3ª, 5ª e 7ª do acorde (em relação à raiz do acorde)
     const getChromaticInterval = (degreeIndex) => {
         const indexInMode = (rootIntervalIndex + degreeIndex) % 7;
         const interval = modeIntervals[indexInMode];
         const rootInterval = modeIntervals[rootIntervalIndex];
-        return (interval - rootInterval + 12) % 12; // Transpõe para que a raiz do acorde seja 0
+        return (interval - rootInterval + 12) % 12;
     };
 
-    const third = getChromaticInterval(2); // 3ª
-    const fifth = getChromaticInterval(4); // 5ª
-    const seventh = getChromaticInterval(6); // 7ª
+    const third = getChromaticInterval(2); 
+    const fifth = getChromaticInterval(4); 
+    const seventh = getChromaticInterval(6); 
 
     let quality = '';
 
-    // 1. Determina a Terça
-    if (third === 3) { quality = 'm'; } // menor
-    else if (third === 4) { quality = 'Maj'; } // maior
+    if (third === 3) { quality = 'm'; } 
+    else if (third === 4) { quality = 'Maj'; } 
     else { return 'sus'; } 
 
-    // 2. Determina a Quinta
-    if (fifth === 6) { quality += '(b5)'; } // diminuta
-    else if (fifth === 8) { quality += '(#5)'; } // aumentada
+    if (fifth === 6) { quality += '(b5)'; } 
+    else if (fifth === 8) { quality += '(#5)'; } 
 
-    // 3. Determina a Sétima
-    if (seventh === 10) { quality += '7'; } // menor
-    else if (seventh === 11) { quality += 'Maj7'; } // maior
-    
-    // 4. Pós-processamento e limpeza para notação padrão
+    if (seventh === 10) { quality += '7'; } 
+    else if (seventh === 11) { quality += 'Maj7'; } 
     
     if (quality.includes('7') || quality.includes('Maj7')) {
         return quality.replace('Maj', ''); 
@@ -553,15 +551,56 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
 
+/**
+ * Cria o bloco de texto unificado para cópia (Cifra + Análise).
+ */
+function createUnifiedOutput(progressionArray, settings) {
+    const { context, rootNote, modeKey, verticality } = settings;
+    
+    // 1. Progressão Cifrada Formatada
+    const formattedProgression = progressionArray.map(measure => `| ${measure} `).join('') + '|';
+
+    // 2. Geração da Análise
+    const suggestedScaleText = getSuggestedScale(rootNote, modeKey, context, settings.customNotes);
+    
+    let output = '';
+    
+    // --- CABEÇALHO ---
+    output += `// ANÁLISE HARMÔNICA\n`;
+    output += `Contexto: ${context.replace('-', ' ')}\n`;
+    
+    if (context !== 'atonal') {
+        output += `Tonalidade Raiz: ${rootNote}\n`;
+        output += `Modo: ${MODE_NAMES[modeKey]}\n`;
+        
+        if (context === 'modal-pura' && verticality !== 'tercas') {
+            output += `Verticalidade: ${verticality}\n`;
+        }
+        
+        // Inclui a escala sugerida
+        output += `Escala Sugerida: ${suggestedScaleText.split(': ')[1]}\n`;
+    } else {
+         output += `Escala Sugerida: ${suggestedScaleText}\n`;
+    }
+    
+    // --- PROGRESSÃO ---
+    output += `\n// PROGRESSÃO\n`;
+    output += formattedProgression;
+    
+    return output;
+}
+
+
 function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
-    const progressionPre = document.getElementById('chord-progression');
-    
     resultsDiv.style.display = 'block';
 
-    const formattedProgression = progressionArray.map(measure => `| ${measure} `).join('');
-    progressionPre.innerText = formattedProgression + '|';
+    // Gera a saída completa para o campo <pre>
+    const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
+    document.getElementById('chord-progression').innerText = unifiedOutput;
 
+    // --- Atualização da ANÁLISE na interface (para feedback visual) ---
+    
     const baseRoot = currentSettings.rootNote;
     const modeKey = currentSettings.modeKey;
     
@@ -575,10 +614,10 @@ function updateResults(progressionArray) {
     );
     
     const verticalityP = document.getElementById('out-verticality-p');
-    if (currentSettings.context === 'modal-pura' && currentSettings.verticality !== 'tercas') {
-        verticalityP.style.display = 'block';
+    const isModalVertical = currentSettings.context === 'modal-pura' && currentSettings.verticality !== 'tercas';
+    
+    verticalityP.style.display = isModalVertical ? 'block' : 'none';
+    if (isModalVertical) {
         document.getElementById('out-verticality').innerText = currentSettings.verticality;
-    } else {
-        verticalityP.style.display = 'none';
     }
 }
