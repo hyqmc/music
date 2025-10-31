@@ -97,14 +97,6 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     return NOTES[noteIndex];
 }
 
-function getDiatonicQuality(interval) {
-    switch (interval) {
-        case 0: case 5: return 'Maj7'; case 2: case 4: case 9: return 'm7';
-        case 7: return '7'; case 11: return 'm7(b5)';
-        default: return 'Maj7';
-    }
-}
-
 
 // =======================================================
 // MÓDULO DE INICIALIZAÇÃO E LISTENERS
@@ -132,14 +124,12 @@ function populateSelect(selectId, optionsMap) {
     }
 }
 
-// Inicializa o seletor de Tonalidade Base (Raiz)
 function populateRootSelect() {
     const roots = {};
     NOTES.forEach(note => { roots[note] = note; });
     populateSelect('root-note', roots);
 }
 
-// Popula o seletor de Modos - Inclui Todos os Modos (21)
 function populateModeSelect() {
     const modes = {};
     for (const key in MODE_NAMES) {
@@ -149,11 +139,9 @@ function populateModeSelect() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inicializa os selects
     populateRootSelect();
     populateModeSelect(); 
     
-    // 2. Listeners
     const contextSelect = document.getElementById('tonality-context');
     const tonalSelectsDiv = document.getElementById('tonal-selects');
     const verticalitySelectDiv = document.getElementById('verticality-select');
@@ -169,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-mode-select').style.display = isAtonal ? 'none' : 'block';
     });
 
-    // 3. Listeners de Ação
     document.getElementById('generate-button').addEventListener('click', generateProgression);
     document.getElementById('apply-transpose').addEventListener('click', () => {
         const value = parseInt(document.getElementById('transpose-value').value);
@@ -198,11 +185,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 
 // --- Módulo 2A: Determinação da Raiz ---
+
 function determineRootAtonal() {
     return getRandomElement(NOTES);
 }
 
-function determineRootModal(baseRoot, modeKey) {
+/**
+ * CORREÇÃO IMPLEMENTADA: Adiciona prevRoot e lógica de estase/tonic-return
+ * para garantir um centro tonal no contexto modal.
+ */
+function determineRootModal(baseRoot, prevRoot, modeKey) {
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
 
@@ -211,9 +203,20 @@ function determineRootModal(baseRoot, modeKey) {
         return NOTES[noteIndex];
     });
 
-    const randomIndex = Math.floor(Math.random() * diatonicNotes.length);
-    return diatonicNotes[randomIndex];
+    // Se for o primeiro acorde, ou 50% de chance de mover (para estase)
+    if (!prevRoot || Math.random() < 0.5) {
+        // 40% de chance de ir para a Tônica, 60% para qualquer outra diatônica
+        if (Math.random() < 0.4) {
+            return baseRoot;
+        }
+        // Retorna qualquer raiz diatônica aleatória
+        return getRandomElement(diatonicNotes);
+    }
+
+    // 50% de chance de manter a raiz anterior (Estase Modal)
+    return prevRoot;
 }
+
 
 function determineRootFunctional(baseRoot, prevRoot) {
     if (!prevRoot) { return baseRoot; }
@@ -260,18 +263,19 @@ function determineRoot(context, prevRoot, settings) {
 
     switch (context) {
         case 'atonal': return determineRootAtonal();
-        case 'modal-pura': return determineRootModal(rootNote, modeKey);
+        // Chamada Corrigida: Passando o prevRoot
+        case 'modal-pura': return determineRootModal(rootNote, prevRoot, modeKey); 
         case 'tonal-fixo': return determineRootFunctional(rootNote, prevRoot);
         case 'tonal-jazz': return determineRootJazz(rootNote, prevRoot);
         default: return NOTES[0];
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade (Corrigido para Coerência Diatônica) ---
+// --- Módulo 2B: Determinação da Qualidade (Lógica Diatônica) ---
 
 /**
  * Constrói a qualidade diatônica base (Maj7, m7, 7, etc.) do acorde
- * usando os intervalos DO MODO ESPECÍFICO (a correção central).
+ * usando os intervalos DO MODO ESPECÍFICO.
  */
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = ALL_MODES_INTERVALS[modeKey];
@@ -293,7 +297,7 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     // 1. Determina a Terça
     if (third === 3) { quality = 'm'; } // menor
     else if (third === 4) { quality = 'Maj'; } // maior
-    else { return 'sus'; } // Deveria ser tratado pelo pool de complexidade
+    else { return 'sus'; } 
 
     // 2. Determina a Quinta
     if (fifth === 6) { quality += '(b5)'; } // diminuta
@@ -305,13 +309,10 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     
     // 4. Pós-processamento e limpeza para notação padrão
     
-    // Se a qualidade já tem 7 ou Maj7, remove o Maj da tríade, senão mantém
     if (quality.includes('7') || quality.includes('Maj7')) {
-        // Ex: mMaj7 (como na Melódica)
         return quality.replace('Maj', ''); 
     }
     
-    // Tríade
     return quality.replace('Maj', ''); 
 }
 
@@ -320,7 +321,7 @@ function determineQuality(root, context, settings) {
     const complexityPool = settings.complexityPool;
     const verticality = settings.verticality;
     const baseRoot = settings.rootNote;
-    const modeKey = settings.modeKey; // Modo específico
+    const modeKey = settings.modeKey; 
 
     if (context === 'atonal') {
         const allQualities = complexityPool.flatMap(level => QUALITIES[level] || []);
@@ -331,27 +332,23 @@ function determineQuality(root, context, settings) {
         return verticality === 'quartal' ? 'Quartal' : 'Quintal';
     }
 
-    // --- Usa o Modo para garantir Coerência Diatônica ---
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const semitonesFromRoot = (rootIndex - baseRootIndex + 12) % 12;
     
     let rootIntervalIndex = ALL_MODES_INTERVALS[modeKey].indexOf(semitonesFromRoot);
 
-    let baseQuality = '7'; // Fallback para substituições não diatônicas (Jazz)
+    let baseQuality = '7'; 
     if (rootIntervalIndex !== -1) {
-        // Usa a lógica CORRIGIDA: constrói a qualidade baseada na escala do modo
         baseQuality = constructDiatonicQuality(modeKey, rootIntervalIndex);
     }
 
     const sortedLevel = getRandomElement(complexityPool);
 
-    // [Restante da lógica de Complexidade é mantida, usando baseQuality]
-    
     if (sortedLevel === 'Triade') {
         if (baseQuality.includes('Maj7') || baseQuality === 'Maj') return 'Maj';
         if (baseQuality.includes('m7') || baseQuality === 'm') return 'm';
-        if (baseQuality.includes('(b5)')) return 'dim'; // Ex: m7(b5) -> dim
+        if (baseQuality.includes('(b5)')) return 'dim'; 
         return baseQuality.replace('7', '');
     }
     
@@ -441,18 +438,15 @@ function generateProgression() {
     let baseRoot = document.getElementById('root-note').value;
     let modeKey = document.getElementById('modal-mode').value;
 
-    // 1. Resolve o modo aleatório (se selecionado)
     if (modeKey === 'Aleatorio') {
         const allModes = Object.keys(ALL_MODES_INTERVALS);
         modeKey = getRandomElement(allModes);
     }
     
-    // 2. Resolve a tonalidade base aleatória (se selecionada)
     if (baseRoot === 'Aleatorio') {
         baseRoot = getRandomElement(NOTES);
     }
     
-    // Validação para evitar a geração se não houver modos/raiz selecionados
     if (context !== 'atonal' && (baseRoot === '' || modeKey === '')) {
         alert('Erro: Por favor, selecione a Tonalidade Base e o Modo Específico (ou "Aleatório").');
         return;
