@@ -3,7 +3,7 @@
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; // Para coerência enharmônica
+const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 
 // Mapeamento de nomes de modos para exibição (Completo com 7 graus por escala)
 const MODE_NAMES = {
@@ -96,6 +96,14 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     const intervalSemitones = modeIntervals[intervalIndex]; 
     const noteIndex = (baseRootIndex + intervalSemitones) % NOTES.length;
     return NOTES[noteIndex];
+}
+
+function getDiatonicQuality(interval) {
+    switch (interval) {
+        case 0: case 5: return 'Maj7'; case 2: case 4: case 9: return 'm7';
+        case 7: return '7'; case 11: return 'm7(b5)';
+        default: return 'Maj7';
+    }
 }
 
 
@@ -481,7 +489,7 @@ function generateProgression() {
 
 
 // =======================================================
-// MÓDULO 3: PÓS-PROCESSAMENTO E SAÍDA (FINAL)
+// MÓDULO 3: PÓS-PROCESSAMENTO E SAÍDA
 // =======================================================
 
 function transposeNote(note, steps) {
@@ -517,27 +525,29 @@ function transposeProgression(progressionArray, semitones) {
 
 /**
  * Corrige o problema enharmônico, garantindo 7 letras únicas (C, D, E, F, G, A, B)
- * para a notação da escala.
+ * para a notação da escala, eliminando duplicação de letras e notação inconsistente.
  */
 function standardizeScaleSpelling(baseRoot, modeKey) {
-    const baseLetters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
     const rootChromaIndex = NOTES.indexOf(baseRoot);
+    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
     
     const chromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
     
     const rootLetter = baseRoot.charAt(0);
-    const rootLetterIndex = baseLetters.indexOf(rootLetter);
+    const rootLetterIndex = BASE_NOTE_MAP.indexOf(rootLetter);
     
     const finalNotes = [];
 
     for (let i = 0; i < 7; i++) {
         const targetChromaIndex = chromaIndices[i];
-        const expectedLetter = baseLetters[(rootLetterIndex + i) % 7];
+        const expectedLetter = BASE_NOTE_MAP[(rootLetterIndex + i) % 7];
         
+        // Encontra o índice cromático da versão natural da letra esperada
         let naturalIndex = NOTES.indexOf(expectedLetter);
         
         let diff = (targetChromaIndex - naturalIndex + 12) % 12;
+        
+        // Ajusta a diferença para usar o mínimo de acidentes (-2 a +2)
         if (diff > 6) diff -= 12;
 
         let spelledNote = expectedLetter;
@@ -566,7 +576,7 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
 }
 
 /**
- * Cria o bloco de texto unificado para cópia (Cifra + Análise).
+ * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
  */
 function createUnifiedOutput(progressionArray, settings) {
     const { context, rootNote, modeKey, verticality } = settings;
@@ -579,11 +589,11 @@ function createUnifiedOutput(progressionArray, settings) {
     
     let output = '';
     
-    // --- PROGRESSÃO (First) ---
+    // --- PROGRESSÃO (Primeiro bloco) ---
     output += `// PROGRESSÃO\n`;
     output += formattedProgression;
     
-    // --- GERADORES (Second, with new header) ---
+    // --- GERADORES (Segundo bloco, renomeado) ---
     output += `\n// GERADORES\n`;
     output += `Contexto: ${context.replace('-', ' ')}\n`;
     
@@ -612,13 +622,14 @@ function updateResults(progressionArray) {
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 
-    // --- Atualização da ANÁLISE na interface (para feedback visual) ---
+    // --- Atualização da ANÁLISE na interface (feedback visual) ---
     
     const baseRoot = currentSettings.rootNote;
     const modeKey = currentSettings.modeKey;
     
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
     
+    // Usando a notação corrigida para o feedback visual
     document.getElementById('out-scale').innerText = getSuggestedScale(
         baseRoot, 
         modeKey, 
@@ -629,8 +640,9 @@ function updateResults(progressionArray) {
     const verticalityP = document.getElementById('out-verticality-p');
     const isModalVertical = currentSettings.context === 'modal-pura' && currentSettings.verticality !== 'tercas';
     
-    verticalityP.style.display = 'block';
+    // Exibe a verticalidade se for modal e não for terças
     if (isModalVertical) {
+        verticalityP.style.display = 'block';
         document.getElementById('out-verticality').innerText = currentSettings.verticality;
     } else {
         verticalityP.style.display = 'none';
