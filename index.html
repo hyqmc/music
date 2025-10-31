@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Progressões de Acordes Avançado</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🎶 Gerador de Progressões de Acordes (Jazz/Modal)</h1>
+        <p>Defina as regras harmônicas para gerar sua progressão musicalmente coerente.</p>
+    </header>
+
+    <main>
+        <div class="controls-container">
+            <section class="control-group" id="context-settings">
+                <h2>1. Contexto e Tonalidade</h2>
+                <div class="input-group">
+                    <label for="tonality-context">Escolha o Contexto Harmônico:</label>
+                    <select id="tonality-context">
+                        <option value="tonal-fixo">Tonal Fixo (Funcional Clássica)</option>
+                        <option value="tonal-jazz">Tonal Aleatório (Jazzística/Substituições)</option>
+                        <option value="modal-pura">Progressão Modal Pura</option>
+                        <option value="atonal">Atonal (Completamente Aleatória)</option>
+                    </select>
+                </div>
+                <div class="input-group" id="modal-mode-select">
+                    <label for="modal-mode">Modo/Tonalidade Base:</label>
+                    <select id="modal-mode">
+                        <option value="C_major">C Maior (Jônio)</option>
+                        <option value="D_dorian">D Dórico</option>
+                        <option value="E_phrygian">E Frígio</option>
+                        </select>
+                </div>
+            </section>
+
+            <section class="control-group" id="complexity-settings">
+                <h2>2. Complexidade dos Acordes</h2>
+                <div class="input-group checkbox-group">
+                    <label>Tipos de Acordes Permitidos:</label><br>
+                    <input type="checkbox" id="c-triads" value="Triade" checked> <label for="c-triads">Tríades</label>
+                    <input type="checkbox" id="c-sevenths" value="Setima" checked> <label for="c-sevenths">Sétimas</label>
+                    <input type="checkbox" id="c-extensions" value="Extensao"> <label for="c-extensions">Extensões (9/11/13)</label>
+                    <input type="checkbox" id="c-suspended" value="Suspenso"> <label for="c-suspended">Suspensos</label>
+                    <input type="checkbox" id="c-diminished" value="Diminuto"> <label for="c-diminished">Diminutos</label>
+                </div>
+                <div class="input-group" id="verticality-select" style="display: none;">
+                    <label>Tipo de Verticalidade (Modal):</label>
+                    <select id="modal-verticality">
+                        <option value="tercas">Terças (Padrão)</option>
+                        <option value="quartal">Quartal (4ªs)</option>
+                        <option value="quintal">Quintal (5ªs)</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="control-group" id="rhythm-settings">
+                <h2>3. Estrutura Rítmica e Coloração</h2>
+                <div class="input-group">
+                    <label for="num-measures">Número Total de Compassos:</label>
+                    <input type="number" id="num-measures" value="4" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="chords-per-measure">Acordes por Compasso (Ex: 1, 2, 2, 1):</label>
+                    <input type="text" id="chords-per-measure" value="1, 1, 1, 1">
+                </div>
+                <div class="input-group checkbox-group">
+                    <input type="checkbox" id="c-bass" value="BaixoAlternativo"> <label for="c-bass">Incluir Baixo Alternativo ( / )</label>
+                    <input type="checkbox" id="c-tensions" value="TensoesAlteradas"> <label for="c-tensions">Incluir Tensões Alteradas</label>
+                </div>
+            </section>
+        </div>
+
+        <button id="generate-button">GERAR PROGRESSÃO</button>
+
+        <section class="results-container" id="results" style="display: none;">
+            <h2>Resultado Gerado</h2>
+
+            <div class="result-box result-progression">
+                <h3>Progressão Cifrada</h3>
+                <pre id="chord-progression"></pre>
+                <button id="copy-button">Copiar Cifra</button>
+            </div>
+
+            <div class="result-box result-analysis">
+                <h3>Análise Harmônica</h3>
+                <p><strong>Contexto:</strong> <span id="out-context"></span></p>
+                <p><strong>Escala Sugerida:</strong> <span id="out-scale"></span></p>
+                <p id="out-verticality-p" style="display: none;"><strong>Verticalidade:</strong> <span id="out-verticality"></span></p>
+            </div>
+
+            <div class="result-box result-transpose">
+                <h3>Transposição</h3>
+                <div class="input-group inline-group">
+                    <label for="transpose-value">Transpor em Semitons:</label>
+                    <input type="number" id="transpose-value" value="0" min="-12" max="12">
+                    <button id="apply-transpose">Aplicar Transposição</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
