@@ -6,7 +6,7 @@ const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
-// NOVO: Estrutura expandida para Escalas -> Modos
+// NOVO: Estrutura aninhada expandida para SCALES_DATA
 const SCALES_DATA = {
     // --- ESCALAS DIATÔNICAS E DERIVADAS DE 7 NOTAS ---
     'major_diatonic': {
@@ -45,13 +45,25 @@ const SCALES_DATA = {
             { key: 'superlocrian', name: 'Superlócrio (Alterada)', intervals: [0, 1, 3, 4, 6, 8, 10] }, 
         ]
     },
+    'harmonic_major': { // NOVO: MAIOR HARMÔNICA
+        name: 'Maior Harmônica',
+        modes: [
+            { key: 'harmonic_major', name: 'Jônio ♭6', intervals: [0, 2, 4, 5, 7, 8, 11] },
+            { key: 'dorian_flat5', name: 'Dórico ♭5', intervals: [0, 2, 3, 5, 6, 9, 10] },
+            { key: 'phrygian_flat4', name: 'Frígio ♭4', intervals: [0, 1, 3, 4, 7, 8, 10] },
+            { key: 'lydian_flat3', name: 'Lídio ♭3', intervals: [0, 2, 3, 6, 7, 9, 11] },
+            { key: 'mixolydian_flat2', name: 'Mixolídio ♭2', intervals: [0, 1, 4, 5, 7, 9, 10] },
+            { key: 'lydian_augmented_sharp2', name: 'Lídio ♯2 ♯5', intervals: [0, 3, 4, 6, 8, 9, 11] },
+            { key: 'locrian_flat7', name: 'Lócrio ♭♭7', intervals: [0, 1, 3, 5, 6, 8, 9] }, 
+        ]
+    },
     
     // --- ESCALAS BEBOP (8 NOTAS) ---
     'bebop': {
         name: 'Bebop (8 Notas)',
         modes: [
-            { key: 'bebop_major', name: 'Bebop Maior', intervals: [0, 2, 4, 5, 7, 8, 9, 11] }, // ♭6 adicionada
-            { key: 'bebop_dominant', name: 'Bebop Dominante', intervals: [0, 2, 4, 5, 7, 9, 10, 11] }, // 7ª Maior adicionada
+            { key: 'bebop_major', name: 'Bebop Maior', intervals: [0, 2, 4, 5, 7, 8, 9, 11] }, 
+            { key: 'bebop_dominant', name: 'Bebop Dominante', intervals: [0, 2, 4, 5, 7, 9, 10, 11] }, 
         ]
     },
 
@@ -125,22 +137,15 @@ function getRandomElement(pool) {
     return pool[randomIndex];
 }
 
-/**
- * Busca os intervalos de um modo específico na estrutura SCALES_DATA.
- */
 function getModeIntervals(modeKey) {
     for (const scaleKey in SCALES_DATA) {
         const modes = SCALES_DATA[scaleKey].modes;
         const foundMode = modes.find(m => m.key === modeKey);
         if (foundMode) return foundMode.intervals;
     }
-    // Retorna Jônio como fallback
     return SCALES_DATA.major_diatonic.modes[0].intervals; 
 }
 
-/**
- * Retorna o nome completo do modo para exibição.
- */
 function getModeName(modeKey) {
     for (const scaleKey in SCALES_DATA) {
         const modes = SCALES_DATA[scaleKey].modes;
@@ -217,7 +222,6 @@ function populateScaleSelect() {
         option.textContent = SCALES_DATA[key].name;
         scaleSelect.appendChild(option);
     }
-    // Inicializa o seletor de modo com a primeira escala (Maior)
     updateModeSelect(Object.keys(SCALES_DATA)[0]); 
 }
 
@@ -230,8 +234,13 @@ function updateModeSelect(selectedScaleKey) {
     randomOption.textContent = 'Aleatório';
     modeSelect.appendChild(randomOption);
 
-    if (selectedScaleKey === 'Aleatorio' || !SCALES_DATA[selectedScaleKey]) {
-        // Se 'Aleatório' ou escala inválida, lista todos os modos de 'Maior'
+    // CORREÇÃO: Se a escala for "Aleatório", o modo também deve ser forçado a "Aleatório"
+    if (selectedScaleKey === 'Aleatorio') {
+        // Apenas o "Aleatório" já foi adicionado acima.
+        return;
+    }
+
+    if (!SCALES_DATA[selectedScaleKey]) {
         selectedScaleKey = 'major_diatonic'; 
     }
     
@@ -338,10 +347,6 @@ function determineRootFunctional(baseRoot, prevRoot) {
     const randomDegreeRoman = possibleDegreesRoman[Math.floor(Math.random() * possibleDegreesRoman.length)];
     const nextDegreeIntervalIndex = degreeMap[randomDegreeRoman];
     
-    // A função getNoteFromDegree ainda usa uma lógica de 7 graus.
-    // Para escalas com N notas, teríamos que adaptar a função
-    // ou manter o mapeamento de função sobre o ciclo de quintas (I, II, III, etc)
-    // Para simplificar, mantemos o ciclo de 7 graus, mas a qualidade será corrigida.
     return getNoteFromDegree(baseRoot, nextDegreeIntervalIndex); 
 }
 
@@ -381,63 +386,60 @@ function determineRoot(context, prevRoot, settings) {
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
-    const scaleLength = modeIntervals.length;
 
-    /**
-     * Tenta encontrar o intervalo cromático para um grau específico (ex: 3ª, 5ª, 7ª) 
-     * a partir da raiz do acorde (rootIntervalIndex) dentro da escala.
-     * Retorna -1 se o grau estiver fora da escala de 7 notas.
-     */
     const getChromaticInterval = (degreeIndex) => {
-        // Encontra o semitom do grau 'degreeIndex' a partir da raiz da escala (0)
-        // Se a escala tiver menos de 7 notas, usamos o módulo da escala para achar a nota
-        const searchIndex = (rootIntervalIndex + degreeIndex * 2) % scaleLength;
+        // Mapeamos os graus 0, 1, 2, 3... para os intervalos na escala.
+        const targetDegreeIntervals = [0, 2, 4, 5, 7, 9, 11]; // Intervalos da Escala Maior (para mapeamento)
+        const targetSemitone = targetDegreeIntervals[degreeIndex * 2]; // 1ª, 3ª, 5ª, 7ª (grau 0, 1, 2, 3)
         
-        // A lógica de acordes diatônicos funciona melhor com 7 notas.
-        // Para escalas com tamanho diferente de 7, forçamos o mapeamento direto de semitons.
-        // Mapeamos os graus 0, 2, 4, 6, 8, 10... para a escala.
-        const targetIndices = [0, 2, 4, 6]; // 1ª, 3ª, 5ª, 7ª
+        // Simplesmente checa se o semitom esperado (Ex: 3M = 4 semitons) existe na escala
+        // a partir da raiz do acorde (rootIntervalIndex).
         
-        if (targetIndices.includes(degreeIndex * 2) && degreeIndex * 2 < scaleLength) {
-            const interval = modeIntervals[degreeIndex * 2];
-            const rootInterval = modeIntervals[rootIntervalIndex];
-            return (interval - rootInterval + 12) % 12;
-        }
+        // O índice de semitons na escala deve ser: (rootIndex + targetSemitone) % 12
+        const rootChromaIndex = getModeIntervals(modeKey)[rootIntervalIndex];
+        const targetChromaIndex = (rootChromaIndex + targetSemitone) % 12;
 
-        // Se a escala não tem o grau desejado, retorna um valor especial
-        return -1; 
+        let foundInterval = -1;
+        
+        for (let i = 0; i < modeIntervals.length; i++) {
+             if (modeIntervals[i] === targetChromaIndex) {
+                 // Encontrado o semitom do grau na escala! Calcula o intervalo relativo.
+                 foundInterval = (modeIntervals[i] - rootChromaIndex + 12) % 12;
+                 break;
+             }
+        }
+        
+        return foundInterval; 
     };
 
-    const third = getChromaticInterval(1); 
-    const fifth = getChromaticInterval(2); 
-    const seventh = getChromaticInterval(3); 
+    const third = getChromaticInterval(1); // 3ª
+    const fifth = getChromaticInterval(2); // 5ª
+    const seventh = getChromaticInterval(3); // 7ª
     
     let quality = '';
 
     // 1. Determinação da Terça (Maior/Menor/Sus)
-    if (third === 3) { quality = 'm'; } // 3m
-    else if (third === 4) { quality = 'Maj'; } // 3M
-    else if (third === -1) { quality = 'sus'; } // Sem 3ª (Pentatônica, Tons Inteiros)
-    else { quality = 'sus'; } 
+    if (third === 3) { quality = 'm'; } 
+    else if (third === 4) { quality = 'Maj'; } 
+    else if (third === -1 || third !== 3 && third !== 4) { quality = 'sus'; } // Sem 3ª ou 3ª alterada incomum
 
     // 2. Determinação da Quinta (Perfeita/Aumentada/Diminuta)
-    if (fifth === 6) { quality += '(b5)'; } // 5d
-    else if (fifth === 8) { quality += '(#5)'; } // 5a
-    // Se fifth for 7 (5J), ou -1 (fora da escala), a qualidade não muda
+    if (fifth === 6) { quality += '(b5)'; } 
+    else if (fifth === 8) { quality += '(#5)'; } 
+    // Se fifth for -1, é considerada power chord ou sus, tratado abaixo.
     
-    // 3. Determinação da Sétima (Maj7/7)
-    if (seventh === 10) { quality += '7'; } // 7m
-    else if (seventh === 11) { quality += 'Maj7'; } // 7M
-    // Se seventh for -1 (fora da escala), ou 9 (dim7 - raro aqui) a qualidade não muda
-
+    // 3. Determinação da Sétima (Maj7/7/Dim)
+    if (seventh === 10) { quality += '7'; } 
+    else if (seventh === 11) { quality += 'Maj7'; } 
+    else if (seventh === 9) { quality += 'dim7'; } // Sétima diminuta (para alguns casos)
+    
     // Ajustes finais
     if (quality.includes('sus')) {
-        // Se sus, remove qualquer outra qualidade (exceto b5 ou 7m)
         if (quality.includes('7')) return '7sus4';
-        return 'sus'; // Simplifica para sus4
+        if (fifth === -1) return '5'; // Se sus e sem 5ª (Pentatônica), é um Power Chord efetivo (Raiz + 5J)
+        return 'sus'; 
     }
     
-    // Se for Maj ou Maj7, remove 'Maj' da tríade para simplificar a cifragem: C Maj7 -> Cmaj7, C Maj -> C
     if (quality === 'Maj') return ''; 
     return quality.replace('Maj', ''); 
 }
@@ -482,11 +484,10 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        if (baseQuality === 'Maj' || baseQuality === '') return ''; 
+        if (baseQuality === '' || baseQuality.includes('sus')) return baseQuality;
         if (baseQuality.includes('Maj7')) return 'Maj';
         if (baseQuality.includes('m7') || baseQuality === 'm') return 'm';
         if (baseQuality.includes('(b5)')) return 'dim'; 
-        if (baseQuality.includes('sus')) return baseQuality;
         return baseQuality.replace('7', '');
     }
     
@@ -494,8 +495,7 @@ function determineQuality(root, context, settings) {
         const possibleExtensions = ['9', '13']; 
         let extension = getRandomElement(possibleExtensions);
 
-        // Não aplica extensões se a qualidade base for sus ou se for uma escala com poucas notas
-        if (baseQuality.includes('sus') || baseQuality.includes('5')) return baseQuality;
+        if (baseQuality.includes('sus') || baseQuality === '5' || baseQuality === '') return baseQuality;
         
         if (baseQuality.startsWith('m')) { extension = '9'; }
         
@@ -505,7 +505,6 @@ function determineQuality(root, context, settings) {
     
     if (sortedLevel === 'Suspenso') {
         const susQualities = QUALITIES['Suspenso'];
-        // Só permite suspensos em acordes com 7ª ou sem qualidade (maior)
         if (baseQuality.includes('7') || baseQuality === '' || baseQuality.includes('Maj')) {
             return getRandomElement(susQualities);
         }
@@ -585,10 +584,13 @@ function generateProgression() {
     let modeKey = document.getElementById('modal-mode').value;
     let scaleType = document.getElementById('scale-type').value; 
 
-    if (modeKey === 'Aleatorio' || scaleType === 'Aleatorio') { 
+    if (scaleType === 'Aleatorio') { 
         const scaleKeys = Object.keys(SCALES_DATA);
         scaleType = getRandomElement(scaleKeys);
         
+        const modesInScale = SCALES_DATA[scaleType].modes;
+        modeKey = getRandomElement(modesInScale).key;
+    } else if (modeKey === 'Aleatorio') {
         const modesInScale = SCALES_DATA[scaleType].modes;
         modeKey = getRandomElement(modesInScale).key;
     }
@@ -700,10 +702,6 @@ function transposeProgression(progressionArray, semitones) {
     return newProgression;
 }
 
-/**
- * Cria a grafia correta da escala (C, D, Eb, F, G, Ab, B)
- * Adaptação para escalas com número de notas diferente de 7.
- */
 function standardizeScaleSpelling(baseRoot, modeKey) {
     const modeIntervals = getModeIntervals(modeKey); 
     const rootChromaIndex = NOTES.indexOf(baseRoot);
@@ -712,16 +710,10 @@ function standardizeScaleSpelling(baseRoot, modeKey) {
     
     const finalNotes = [];
     
-    // Calcula o número de letras base a serem usadas (Mínimo de 7 para cobertura)
-    const numSteps = Math.min(modeIntervals.length, 7); 
-    
-    // Usamos um contador de passos para garantir que cada intervalo tenha uma nota única
-    // Mapeamos os intervalos para as letras base
     for (let i = 0; i < modeIntervals.length; i++) {
         const intervalSemitones = modeIntervals[i];
         const targetChromaIndex = (rootChromaIndex + intervalSemitones) % 12;
         
-        // Tentativa de encontrar a letra base mais próxima
         let bestLetter = null;
         let minDiff = 12;
 
@@ -729,7 +721,6 @@ function standardizeScaleSpelling(baseRoot, modeKey) {
             const letter = BASE_NOTE_MAP[(rootLetterIndex + j) % 7];
             const letterChromaIndex = NOTES.indexOf(letter.length === 1 ? letter : letter.charAt(0));
 
-            // Calculando a diferença cromática
             const diff = (targetChromaIndex - letterChromaIndex + 12) % 12;
             const absoluteDiff = Math.min(diff, 12 - diff);
 
@@ -770,9 +761,6 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
 
-/**
- * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
- */
 function createUnifiedOutput(progressionArray, settings) {
     const { context, rootNote, modeKey, verticality, scaleType } = settings;
     
