@@ -37,7 +37,6 @@ main {
     box-sizing: border-box;
 }
 
-/* O primeiro bloco de resultado deve ocupar a largura total */
 .result-box.result-main-output {
     flex: 1 1 100%;
 }
@@ -117,19 +116,16 @@ pre {
     border-left: 5px solid #007bff;
 }
 
-/* NOVO ESTILO: Bloco de sugestões de improviso */
 .impro-suggestions-block {
     margin-top: 20px;
     padding-top: 15px;
     border-top: 1px solid #ddd;
 }
 .impro-suggestions-block h3 {
-    color: #28a745; /* Cor para destacar o novo título */
+    color: #28a745; 
     border-bottom-color: #28a745;
 }
 
-
-/* Responsividade */
 @media (max-width: 992px) {
     .control-group, .result-box:not(.result-main-output) {
         flex: 1 1 calc(50% - 10px);
