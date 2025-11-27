@@ -1,10 +1,9 @@
 // =======================================================
-// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL (FINAL)
+// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
-const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
 const SCALES_DATA = {
     'major_diatonic': {
@@ -167,6 +166,7 @@ function standardizeAccidentals(note, accidentalsType) {
     return note;
 }
 
+// Funções de Improviso (Mantidas)
 function getChordIntervals(quality) {
     if (quality.includes('Maj7') || quality.includes('Maj9') || quality.includes('Maj13')) {
         return { essential: [0, 4, 7], full: [0, 4, 7, 11] }; 
@@ -375,7 +375,7 @@ function updateModeSelect(selectedScaleKey) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ESTABILIZAÇÃO: Chama as funções de povoamento
+    // Inicialização da interface
     populateRootSelect();
     populateScaleSelect(); 
     
@@ -600,7 +600,7 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // --- CORREÇÃO DE BUG REFORÇADA: PRIORIZAR MENORES/DIMINUTOS ---
+        // --- CORREÇÃO DE BUG: PRIORIZAR MENORES/DIMINUTOS ---
         
         // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5)
         if (baseQuality.includes('sus') || baseQuality === '5') {
@@ -608,7 +608,6 @@ function determineQuality(root, context, settings) {
         }
 
         // 2. VERIFICA QUALIDADE MENOR/DIMINUTA
-        // Se a qualidade base contiver 'm', '(b5)', ou 'dim', simplifica para o menor ou diminuto correspondente.
         if (baseQuality.includes('m') || baseQuality.includes('(b5)') || baseQuality.includes('dim')) {
              if (baseQuality.includes('dim')) return 'dim'; 
              // Se for m, m7, mMaj7, m7(b5), retorna 'm'.
