@@ -7,7 +7,7 @@
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
         h1, h2, h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
-        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
+        .btn-acao, .btn-substituir, .btn-sub-opcao { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
         #complexidade-opcoes label { margin-right: 15px; display: inline-block; }
         #dados-geracao { background-color: #f0f8ff; padding: 10px; border: 1px dashed #0056b3; margin-bottom: 20px; }
         #pesos-sliders label { display: inline-block; width: 150px; text-align: right; margin-right: 10px; }
@@ -15,6 +15,8 @@
         .historico-item { padding: 5px; border-bottom: 1px dotted #ccc; cursor: pointer; font-size: 0.9em; }
         .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; text-align: center; }
         .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.2em; display: block; margin-bottom: 5px; }
+        .substituicao-area { margin-top: 5px; border-top: 1px dashed #eee; padding-top: 5px; }
+        .sub-opcoes-dropdown { border: 1px solid #ccc; padding: 5px; margin-top: 5px; text-align: left; }
     </style>
 </head>
 <body>
@@ -158,7 +160,7 @@
             preencherModos();
             preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text', true);
             
-            // Listener para atualizar o valor do slider na tela
+            // Listener para sliders
             document.addEventListener('input', function (e) {
                 if (e.target.type === 'range') {
                     const idPart = e.target.id.split('-')[1];
@@ -176,46 +178,78 @@
             });
         }
         
-        // --- GESTÃO DE AÇÕES ---
+        // --- GESTÃO DE ACORDES E SUBSTITUIÇÕES (CORE INTERATIVO) ---
 
-        function getConfigAtual() {
-            const escalaNome = document.getElementById('escala-geradora').value;
-            const modoNome = document.getElementById('modo-ativo').value;
-            const escalaObj = ESCALAS[escalaNome];
+        function aplicarNovaCifra(index, novaCifra) {
+            const container = document.querySelector(`.acorde-container[data-index="${index}"] .cifra-principal`);
+            if (container) {
+                 container.textContent = novaCifra;
+                 container.style.backgroundColor = '#ffffcc'; // Destaca a alteração
+            }
+        }
+
+        function handleSubstituicaoOpcaoClick(index, novaCifra) {
+            aplicarNovaCifra(index, novaCifra);
+            // Oculta todos os dropdowns após a escolha
+            document.querySelectorAll('.sub-opcoes-dropdown').forEach(d => d.style.display = 'none');
+        }
+
+
+        function handleSubstituicaoMainClick(event, acordeIndex, tipoSubstituicao) {
+            const acordeOriginal = progressao_ativa.progressao[acordeIndex];
+            const opcoesData = acordeOriginal.substituicoes_opcoes.find(o => o.tipo === tipoSubstituicao);
             
-            const modoObj = (modoNome !== 'Aleatório' && escalaObj) 
-                ? escalaObj.modos.find(m => m.nome === modoNome) 
-                : null;
-
-            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
-
-            // Leitura dos sliders para pesos
-            const pesoT = parseInt(document.getElementById('peso-tonica').value);
-            const pesoD = parseInt(document.getElementById('peso-dominante').value);
-            const pesoS = parseInt(document.getElementById('peso-subdominante').value);
-            const soma = pesoT + pesoD + pesoS;
-
-            // Atualiza os pesos na configuração do gerador (CORREÇÃO DE PESOS)
-            gerador.pesos.contexto_tonal_fixo = {
-                "I": Math.round(pesoT / soma * 100), // Tônica
-                "V": Math.round(pesoD / soma * 100), // Dominante
-                "IV": Math.round(pesoS / soma * 100), // Subdominante
-                // Distribuir o restante (II, III, VI, VII) proporcionalmente ao peso base
-                "II": Math.round(pesoS / soma * 100 * 0.1), 
-                "VI": Math.round(pesoT / soma * 100 * 0.1),
-            };
-
-
-            return {
-                tonalidade: document.getElementById('tonalidade-base').value,
-                contexto: document.getElementById('contexto-gerador').value,
-                escala: escalaNome,
-                modo: modoNome,
-                escala_ativa: modoObj,
-                ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                complexidade: complexidadeSelecionada, 
-                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
-            };
+            // Local onde o dropdown será injetado
+            let dropdownDiv = document.getElementById(`dropdown-${acordeIndex}`);
+            if (!dropdownDiv) {
+                dropdownDiv = document.createElement('div');
+                dropdownDiv.id = `dropdown-${acordeIndex}`;
+                dropdownDiv.className = 'sub-opcoes-dropdown';
+                event.target.closest('.acorde-container').appendChild(dropdownDiv);
+            }
+            
+            // Toggle de visibilidade
+            if (dropdownDiv.style.display === 'block') {
+                dropdownDiv.style.display = 'none';
+                return;
+            }
+            dropdownDiv.style.display = 'block';
+            dropdownDiv.innerHTML = ''; // Limpa o conteúdo
+            
+            if (opcoesData.tipo === 'Relativo') {
+                opcoesData.acoes.forEach(acao => {
+                    const cifraCalc = gerador.substituirPorRelativo(acordeOriginal, acao.grau);
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-sub-opcao';
+                    btn.textContent = `${acao.label}: ${cifraCalc}`;
+                    btn.onclick = () => handleSubstituicaoOpcaoClick(acordeIndex, cifraCalc);
+                    dropdownDiv.appendChild(btn);
+                });
+            } else if (opcoesData.tipo === 'Trítono') {
+                 opcoesData.acoes.forEach(acao => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-sub-opcao';
+                    btn.textContent = `SubV7: ${acao.cifra_calc}`;
+                    btn.onclick = () => handleSubstituicaoOpcaoClick(acordeIndex, acao.cifra_calc);
+                    dropdownDiv.appendChild(btn);
+                });
+            } else if (opcoesData.tipo === 'Neg. Harm.') {
+                 opcoesData.eixos.forEach(eixo => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-sub-opcao';
+                    btn.textContent = `${eixo.nome}: ${eixo.cifra_calc}`;
+                    btn.onclick = () => handleSubstituicaoOpcaoClick(acordeIndex, eixo.cifra_calc);
+                    dropdownDiv.appendChild(btn);
+                });
+            } else if (opcoesData.tipo === 'AEM') {
+                opcoesData.sugestoes.forEach(sugestao => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-sub-opcao';
+                    btn.textContent = `${sugestao.modo}: ${sugestao.cifra}`;
+                    btn.onclick = () => handleSubstituicaoOpcaoClick(acordeIndex, sugestao.cifra);
+                    dropdownDiv.appendChild(btn);
+                });
+            }
         }
 
         function renderizarResultado(resultado) {
@@ -227,7 +261,7 @@
             // 2. Preencher Cifra Original
             document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
             
-            // 3. Renderizar Botões de Substituição (Implementação Interativa)
+            // 3. Renderizar Botões de Substituição
             const divBotoes = document.getElementById('progressao-com-botoes');
             divBotoes.innerHTML = '';
             
@@ -243,11 +277,9 @@
                 acorde.substituicoes_opcoes.forEach(opt => {
                     const btn = document.createElement('button');
                     btn.className = 'btn-substituir';
-                    btn.setAttribute('data-acao', opt.tipo.toLowerCase().replace(/[^a-z0-9]/g, ''));
                     btn.textContent = opt.tipo.split(' ')[0];
                     
-                    // Exemplo de handler:
-                    btn.onclick = (e) => alert(`Opções para ${opt.tipo} em ${acorde.cifra}. (Lógica completa a ser implementada!)`);
+                    btn.onclick = (e) => handleSubstituicaoMainClick(e, index, opt.tipo);
                     
                     subArea.appendChild(btn);
                 });
@@ -271,6 +303,46 @@
             progressao_ativa = item;
             alert(`Visualizando histórico: ${item.contexto_geracao.tonalidade}`);
         }
+
+        function getConfigAtual() {
+            const escalaNome = document.getElementById('escala-geradora').value;
+            const modoNome = document.getElementById('modo-ativo').value;
+            const escalaObj = ESCALAS[escalaNome];
+            
+            const modoObj = (modoNome !== 'Aleatório' && escalaObj) 
+                ? escalaObj.modos.find(m => m.nome === modoNome) 
+                : null;
+
+            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
+
+            // Leitura dos sliders para pesos
+            const pesoT = parseInt(document.getElementById('peso-tonica').value);
+            const pesoD = parseInt(document.getElementById('peso-dominante').value);
+            const pesoS = parseInt(document.getElementById('peso-subdominante').value);
+            const soma = pesoT + pesoD + pesoS;
+
+            // Atualiza os pesos na configuração do gerador
+            gerador.pesos.contexto_tonal_fixo = {
+                "I": Math.round(pesoT / soma * 100), 
+                "V": Math.round(pesoD / soma * 100),
+                "IV": Math.round(pesoS / soma * 100), 
+                "II": Math.round(pesoS / soma * 100 * 0.1), 
+                "VI": Math.round(pesoT / soma * 100 * 0.1),
+            };
+
+
+            return {
+                tonalidade: document.getElementById('tonalidade-base').value,
+                contexto: document.getElementById('contexto-gerador').value,
+                escala: escalaNome,
+                modo: modoNome,
+                escala_ativa: modoObj,
+                ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
+                complexidade: complexidadeSelecionada, 
+                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
+            };
+        }
+
 
         function gerarNovaProgressao() {
             try {
