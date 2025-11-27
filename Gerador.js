@@ -1,5 +1,4 @@
-// Gerador.js
-// Depende do arquivo data.js
+// Gerador.js (Versão Final com Correções de Lógica e Complexidade)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -7,12 +6,12 @@ class GeradorDeProgressao {
         this.pesos = pesos;
         this.progressoes_historico = [];
         this.notas = NOTAS;
-        // Assume escala e modo iniciais com base na config, para demonstração:
         this.escala_ativa = ESCALAS["Diatônica (Maior)"].modos[0];
         this.mapa_tonal_ativo = {};
     }
-
-    // --- Funções Utilitárias Básicas ---
+    
+    // [FUNÇÕES UTILITÁRIAS AQUI: escolherComPeso, gerarMapaDiatonico, cifrarNota]
+    // ... (Mantidas conforme as últimas versões estáveis) ...
 
     escolherComPeso(opcoes, pesos) {
         const somaTotalPesos = Object.values(pesos).reduce((soma, peso) => soma + peso, 0);
@@ -61,28 +60,69 @@ class GeradorDeProgressao {
         return Array.isArray(nome_alternativo) ? nome_alternativo[0] : nome_alternativo;
     }
 
-    // --- Funções de Harmonização e Cifragem ---
 
+    // --- NOVA FUNÇÃO DE LÓGICA DE COMPLEXIDADE ---
+    getComplexidadeAtiva() {
+        const tipos_marcados = this.config.complexidade; // Array de strings (ex: ['triade', 'sus4'])
+        
+        let pesos_filtrados = {};
+        
+        // 1. Filtra os níveis de base (triade, setima, extensão)
+        const niveis_base = ['triade', 'setima', 'extensao'];
+        
+        if (!tipos_marcados.some(t => niveis_base.includes(t))) {
+            // Se nada base foi marcado, força TRIADE (comportamento seguro)
+            pesos_filtrados['triade'] = 100;
+        } else {
+             for (const key of niveis_base) {
+                 if (tipos_marcados.includes(key)) {
+                     pesos_filtrados[key] = this.pesos.complexidade[key];
+                 }
+             }
+        }
+        
+        return {
+            niveis: pesos_filtrados,
+            tipos_especiais: tipos_marcados.filter(t => !niveis_base.includes(t))
+        };
+    }
+
+    // --- FUNÇÃO DE CIFRAGEM (CORRIGIDA) ---
     montarSufixo(funcao_base, tipo_complexidade) {
         const qualidade = funcao_base.qualidade;
         let sufixo = (qualidade === "m" || qualidade === "dom" || qualidade === "dim") ? qualidade : "";
+        
+        const tipos_especiais = this.config.complexidade;
 
+        // 1. Aplica o nível de complexidade (TRIADE, SETIMA, EXTENSAO)
         if (tipo_complexidade === "setima" || tipo_complexidade === "extensao") {
             if (qualidade === "maj") sufixo = "maj7";
             else if (qualidade === "dom") sufixo = "7";
             else if (qualidade === "m") sufixo += "7";
             else if (qualidade === "m7(b5)") sufixo = "m7(b5)";
-        } else if (tipo_complexidade === "especial") {
-            if (Math.random() < 0.2) sufixo = "+";
-            else if (Math.random() < 0.5) sufixo += "sus4";
-            else sufixo += "5";
+        } 
+        
+        // 2. Aplica TIPOS ESPECIAIS (Separados e com baixa probabilidade)
+        if (tipos_especiais.includes('aumentado') && qualidade !== "m" && Math.random() < 0.15) {
+             return "+"; // Ex: C+
         }
+        if (tipos_especiais.includes('diminuto') && qualidade === "m" && Math.random() < 0.1) {
+             return "dim"; // Ex: Cdim
+        }
+        if (tipos_especiais.includes('sus4') && qualidade === "dom" && Math.random() < 0.2) {
+             return "sus4";
+        }
+        if (tipos_especiais.includes('powerchord') && Math.random() < 0.1) {
+             return "5";
+        }
+        
         return sufixo.replace('dom', '');
     }
-
+    
+    // ... (aplicarBaixoAlternativo, harmonizarAcorde)
+    
     aplicarBaixoAlternativo(cifra_base, raiz_acorde_cifra) {
-        // CORRIGIDO: Acesso direto à raiz.
-        if (this.config.incluirBaixosAlternativos && Math.random() < 0.2) {
+        if (this.config.incluirBaixosAlternativos && this.config.complexidade.includes('slash_chords') && Math.random() < 0.2) {
             const graus_inversao_semitons = [4, 7]; 
             
             if (graus_inversao_semitons.length > 0) {
@@ -105,13 +145,14 @@ class GeradorDeProgressao {
         const raiz_index_absoluto = (tonalidade_index + grau_semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
-        const tipo_complexidade = this.escolherComPeso(Object.keys(this.pesos.complexidade), this.pesos.complexidade);
+        const complexidade_ativa = this.getComplexidadeAtiva(); // Obtém os níveis filtrados
+        const tipo_complexidade = this.escolherComPeso(Object.keys(complexidade_ativa.niveis), complexidade_ativa.niveis);
+        
         let sufixo = this.montarSufixo(funcao_base, tipo_complexidade);
         let tensoes = ""; 
 
         let cifra_final = raiz_cifra + sufixo + tensoes;
         
-        // Chamada corrigida para baixo alternativo
         cifra_final = this.aplicarBaixoAlternativo(cifra_final, raiz_cifra); 
 
         return {
@@ -123,20 +164,9 @@ class GeradorDeProgressao {
             sugestoes_escala: { contextual: { nome: `${raiz_cifra} ${this.config.modo}`, estrutura: ESTRUTURA_INTERV_RELATIVA[this.config.modo.split(' ')[0]] || "Estrutura Padrão" } }
         };
     }
-
-    // --- Funções de Substituição Complexa ---
-
-    aplicarHarmoniaNegativa(acorde_objeto, eixo_semitom_total) {
-        const raiz_index = this.notas.indexOf(acorde_objeto.raiz);
-        const neg_raiz_index = (2 * eixo_semitom_total - raiz_index);
-        const neg_raiz_index_ajustado = Math.round((neg_raiz_index % 12 + 12) % 12);
-        const neg_raiz_cifra = this.cifrarNota(neg_raiz_index_ajustado);
-
-        let neg_sufixo = acorde_objeto.cifra.includes("m") ? "maj7" : "m7";
-        
-        return `${neg_raiz_cifra}${neg_sufixo}`;
-    }
     
+    // ... (restante das funções: gerarSugestoesDeSubstituicao, gerarProgressao, formatarOutput, etc.)
+
     gerarSugestoesDeSubstituicao(acorde_objeto) {
         const substituicoes = [];
         const funcao_original = acorde_objeto.funcao_tipo;
@@ -153,7 +183,6 @@ class GeradorDeProgressao {
             substituicoes.push({ tipo: "SubV7/V7" }); 
         }
 
-        // CORRIGIDO: Variável 'tonalidade_index' corretamente definida localmente.
         const tonalidade_index = this.notas.indexOf(this.config.tonalidade); 
         
         const eixo_tonico_index = (tonalidade_index + 3.5); 
@@ -248,7 +277,7 @@ class GeradorDeProgressao {
         return progressao_transposta;
     }
     
-    // As funções exportarHistorico e importarHistorico (simplificadas)
+    // [FUNÇÕES DE HISTÓRICO AQUI: exportarHistorico, importarHistorico]
     exportarHistorico() {
         const json_string = JSON.stringify(this.progressoes_historico, null, 2);
         const blob = new Blob([json_string], { type: 'application/json' });
