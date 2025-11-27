@@ -45,7 +45,7 @@ const SCALES_DATA = {
             { key: 'superlocrian', name: 'Superlócrio (Alterada)', intervals: [0, 1, 3, 4, 6, 8, 10] }, 
         ]
     },
-    'harmonic_major': { // NOVO: MAIOR HARMÔNICA
+    'harmonic_major': { 
         name: 'Maior Harmônica',
         modes: [
             { key: 'harmonic_major', name: 'Jônio ♭6', intervals: [0, 2, 4, 5, 7, 8, 11] },
@@ -236,7 +236,6 @@ function updateModeSelect(selectedScaleKey) {
 
     // CORREÇÃO: Se a escala for "Aleatório", o modo também deve ser forçado a "Aleatório"
     if (selectedScaleKey === 'Aleatorio') {
-        // Apenas o "Aleatório" já foi adicionado acima.
         return;
     }
 
@@ -388,14 +387,10 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
 
     const getChromaticInterval = (degreeIndex) => {
-        // Mapeamos os graus 0, 1, 2, 3... para os intervalos na escala.
-        const targetDegreeIntervals = [0, 2, 4, 5, 7, 9, 11]; // Intervalos da Escala Maior (para mapeamento)
-        const targetSemitone = targetDegreeIntervals[degreeIndex * 2]; // 1ª, 3ª, 5ª, 7ª (grau 0, 1, 2, 3)
+        // Intervalos do 1º, 3º, 5º, 7º (a partir da raiz do modo = 0)
+        const targetDegreeIntervals = [0, 2, 4, 5, 7, 9, 11]; 
+        const targetSemitone = targetDegreeIntervals[degreeIndex * 2]; 
         
-        // Simplesmente checa se o semitom esperado (Ex: 3M = 4 semitons) existe na escala
-        // a partir da raiz do acorde (rootIntervalIndex).
-        
-        // O índice de semitons na escala deve ser: (rootIndex + targetSemitone) % 12
         const rootChromaIndex = getModeIntervals(modeKey)[rootIntervalIndex];
         const targetChromaIndex = (rootChromaIndex + targetSemitone) % 12;
 
@@ -403,7 +398,6 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
         
         for (let i = 0; i < modeIntervals.length; i++) {
              if (modeIntervals[i] === targetChromaIndex) {
-                 // Encontrado o semitom do grau na escala! Calcula o intervalo relativo.
                  foundInterval = (modeIntervals[i] - rootChromaIndex + 12) % 12;
                  break;
              }
@@ -421,22 +415,22 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     // 1. Determinação da Terça (Maior/Menor/Sus)
     if (third === 3) { quality = 'm'; } 
     else if (third === 4) { quality = 'Maj'; } 
-    else if (third === -1 || third !== 3 && third !== 4) { quality = 'sus'; } // Sem 3ª ou 3ª alterada incomum
+    else if (third === -1 || third !== 3 && third !== 4) { quality = 'sus'; } 
 
     // 2. Determinação da Quinta (Perfeita/Aumentada/Diminuta)
     if (fifth === 6) { quality += '(b5)'; } 
     else if (fifth === 8) { quality += '(#5)'; } 
-    // Se fifth for -1, é considerada power chord ou sus, tratado abaixo.
     
     // 3. Determinação da Sétima (Maj7/7/Dim)
     if (seventh === 10) { quality += '7'; } 
     else if (seventh === 11) { quality += 'Maj7'; } 
-    else if (seventh === 9) { quality += 'dim7'; } // Sétima diminuta (para alguns casos)
+    else if (seventh === 9) { quality += 'dim7'; } 
     
     // Ajustes finais
     if (quality.includes('sus')) {
         if (quality.includes('7')) return '7sus4';
-        if (fifth === -1) return '5'; // Se sus e sem 5ª (Pentatônica), é um Power Chord efetivo (Raiz + 5J)
+        // Se sus e sem 5ª (comum em pentatônicas), retorna 5
+        if (fifth === -1) return '5'; 
         return 'sus'; 
     }
     
@@ -806,9 +800,7 @@ function updateResults(progressionArray) {
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
     document.getElementById('visual-progression').innerText = formattedProgression;
     
-    // Notificação sobre o teclado removido
-    document.getElementById('keyboard-removed-notice').textContent = 'Visualização do teclado removida por solicitação.';
-
+    // ATENÇÃO: A remoção do aviso de teclado foi aplicada aqui.
 
     // Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
