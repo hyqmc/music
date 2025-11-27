@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <title>Gerador de Progressões Harmônicas</title>
     <style>
-        /* Estilos mantidos para visualização */
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
+        h1, h2, h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
         .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; }
         .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.5em; display: block; margin-bottom: 5px; }
         .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
+        #complexidade-opcoes label { margin-right: 15px; }
     </style>
 </head>
 <body>
@@ -21,7 +21,11 @@
     <h1>🎵 Gerador de Progressões Harmônicas</h1>
 
     <div id="config-inputs">
-        <h3>1. Contexto, Tonalidade, Escala e Modo</h3>
+        <h3>1. Contexto, Tonalidade, Escala e Modos</h3>
+        
+        <label>Contexto Gerador:</label>
+        <select id="contexto-gerador"></select>
+        
         <label>Tonalidade Base:</label>
         <select id="tonalidade-base"></select>
         
@@ -33,8 +37,18 @@
         
         <hr/>
         
-        <h3>2. Estrutura Rítmica e Complexidade</h3>
-        <label>Ritmo (Acordes/Comp.):</label>
+        <h3>2. Complexidade e Estrutura Rítmica</h3>
+        <label>Tipos de Acorde:</label><br>
+        <div id="complexidade-opcoes">
+            <label><input type="checkbox" name="complexidade" value="triade" checked> Tríades</label>
+            <label><input type="checkbox" name="complexidade" value="setima" checked> Sétimas</label>
+            <label><input type="checkbox" name="complexidade" value="extensao"> Extensões (9/11/13)</label>
+            <label><input type="checkbox" name="complexidade" value="especial"> Diminutos/Aumentados/Suspensos</label>
+            <label><input type="checkbox" name="complexidade" value="slash_chords" id="incluir-baixos-alternativos"> Baixos Alternativos (/)</label>
+        </div>
+
+        <br>
+        <label>Estrutura Rítmica (Acordes/Comp.):</label>
         <input type="text" id="ritmo-input" value="1,1,2,1" placeholder="Ex: 1,1,2,1">
         
         <br><br>
@@ -85,7 +99,6 @@
             }
         }
         
-        // Função de inicialização
         function inicializarUI() {
             // 1. Tonalidades e Transposição
             preencherSelect('tonalidade-base', NOTAS);
@@ -96,7 +109,10 @@
             
             // 3. Modos
             document.getElementById('escala-geradora').addEventListener('change', preencherModos);
-            preencherModos(); // Preenche inicialmente
+            preencherModos();
+            
+            // 4. Contextos
+            preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text');
         }
         
         // --- GESTÃO DE AÇÕES ---
@@ -107,28 +123,31 @@
             const escalaObj = ESCALAS[escalaNome];
             const modoObj = escalaObj.modos.find(m => m.nome === modoNome);
 
+            // Coleta a complexidade selecionada
+            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade"]:checked')).map(cb => cb.value);
+
             return {
                 tonalidade: document.getElementById('tonalidade-base').value,
+                contexto: document.getElementById('contexto-gerador').value,
                 escala: escalaNome,
                 modo: modoNome,
-                escala_ativa: modoObj, // Passa o objeto do modo para a lógica de cifragem
+                escala_ativa: modoObj,
                 ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                incluirBaixosAlternativos: true // Fixo para teste
+                complexidade: complexidadeSelecionada,
+                incluirBaixosAlternativos: document.getElementById('incluir-baixos-alternativos').checked
             };
         }
 
         function gerarNovaProgressao() {
             try {
-                // Atualiza a configuração do gerador
                 gerador.config = getConfigAtual();
-                gerador.escala_ativa = gerador.config.escala_ativa; // Define o modo ativo para a classe
+                gerador.escala_ativa = gerador.config.escala_ativa;
                 
                 const resultado = gerador.gerarProgressao();
                 progressao_ativa = resultado;
                 
                 document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
-                // renderizarResultado(resultado); // Chamar função para botões de substituição
-                alert("Progressão Gerada com Sucesso! (Verifique a área cifrada)");
+                // renderizarResultado(resultado); // Descomentar quando a função de renderização estiver completa
                 
             } catch (e) {
                 console.error("Erro na geração:", e);
