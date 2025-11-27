@@ -1,14 +1,12 @@
 // =======================================================
-// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL
+// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL (FINAL)
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
-// Estrutura aninhada expandida para SCALES_DATA (Mantida como a mais recente)
 const SCALES_DATA = {
-    // --- ESCALAS DIATÔNICAS E DERIVADAS DE 7 NOTAS ---
     'major_diatonic': {
         name: 'Maior (Diatônica)',
         modes: [
@@ -57,8 +55,6 @@ const SCALES_DATA = {
             { key: 'locrian_flat7', name: 'Lócrio ♭♭7', intervals: [0, 1, 3, 5, 6, 8, 9] }, 
         ]
     },
-    
-    // --- ESCALAS BEBOP (8 NOTAS) ---
     'bebop': {
         name: 'Bebop (8 Notas)',
         modes: [
@@ -66,8 +62,6 @@ const SCALES_DATA = {
             { key: 'bebop_dominant', name: 'Bebop Dominante', intervals: [0, 2, 4, 5, 7, 9, 10, 11] }, 
         ]
     },
-
-    // --- ESCALAS SIMÉTRICAS ---
     'diminished': {
         name: 'Diminuta (Octatônica)',
         modes: [
@@ -81,8 +75,6 @@ const SCALES_DATA = {
             { key: 'whole_tone', name: 'Tons Inteiros', intervals: [0, 2, 4, 6, 8, 10] },
         ]
     },
-    
-    // --- ESCALAS REDUZIDAS ---
     'pentatonic': {
         name: 'Pentatônica (5 Notas)',
         modes: [
@@ -91,8 +83,6 @@ const SCALES_DATA = {
         ]
     }
 };
-
-// ... (Outras constantes mantidas) ...
 
 const ENHARMONIC_MAP = {
     'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
@@ -118,163 +108,9 @@ const FUNCTIONAL_RULES = {
 
 
 // =======================================================
-// FUNÇÕES AUXILIARES E LÓGICA DE IMPROVISO (NOVO)
+// FUNÇÕES AUXILIARES E LÓGICA DE IMPROVISO 
 // =======================================================
 
-// Função para obter os intervalos essenciais e completos de um acorde
-function getChordIntervals(quality) {
-    // Simplificação de qualidades estendidas para a fundamental (7ª/3ª/5ª)
-    if (quality.includes('Maj7') || quality.includes('Maj9') || quality.includes('Maj13')) {
-        return { essential: [0, 4, 7], full: [0, 4, 7, 11] }; // R, M3, P5, M7
-    }
-    if (quality.includes('mMaj7')) {
-        return { essential: [0, 3, 7], full: [0, 3, 7, 11] }; // R, m3, P5, M7
-    }
-    if (quality.includes('m7') || quality.includes('m9') || quality.includes('m11') || quality.includes('m13')) {
-        return { essential: [0, 3, 7], full: [0, 3, 7, 10] }; // R, m3, P5, m7
-    }
-    if (quality.includes('7') || quality.includes('9') || quality.includes('13')) {
-        return { essential: [0, 4, 7], full: [0, 4, 7, 10] }; // R, M3, P5, m7
-    }
-    if (quality.includes('m7(b5)')) {
-        return { essential: [0, 3, 6], full: [0, 3, 6, 10] }; // R, m3, d5, m7
-    }
-    if (quality.includes('dim7')) {
-        return { essential: [0, 3, 6], full: [0, 3, 6, 9] }; // R, m3, d5, d7
-    }
-    if (quality.includes('Aug') || quality.includes('(#5)')) {
-        return { essential: [0, 4, 8], full: [0, 4, 8, 11] }; // R, M3, #5, (M7)
-    }
-    if (quality.includes('sus')) {
-        return { essential: [0, 7], full: [0, 5, 7, 10] }; // R, P5, (P4)
-    }
-    if (quality === 'Maj' || quality === '') {
-        return { essential: [0, 4, 7], full: [0, 4, 7] }; // R, M3, P5
-    }
-    if (quality === 'm') {
-        return { essential: [0, 3, 7], full: [0, 3, 7] }; // R, m3, P5
-    }
-    return { essential: [0, 4, 7], full: [0, 4, 7] }; 
-}
-
-// Função central para sugerir escalas compatíveis
-function getSuggestedImproScales(fullChord, baseModeKey, baseRoot) {
-    const chordMatch = fullChord.match(/([A-G][#b]?)([A-Za-z0-9()#b]*)/);
-    if (!chordMatch) return [];
-
-    const chordRoot = chordMatch[1];
-    const rawQuality = chordMatch[2].replace(/[()]/g, '').split('/')[0]; // Remove tensões e baixo alternativo
-    
-    // Lógica para Tríades, que são mais ambíguas em termos de 7ª
-    let analyzedQuality = rawQuality;
-    if (analyzedQuality === 'Maj' || analyzedQuality === '') analyzedQuality = 'Maj7';
-    if (analyzedQuality === 'm') analyzedQuality = 'm7';
-    
-    // Simplificação de acordes Quartal/Quintal
-    if (rawQuality.includes('Quartal') || rawQuality.includes('Quintal')) {
-        return [{ 
-            name: getModeName(baseModeKey), 
-            note: baseRoot, 
-            contextual: true, 
-            color: 'Siga o Modo Gerador', 
-            modeKey: baseModeKey 
-        }];
-    }
-
-    const targetIntervals = getChordIntervals(analyzedQuality).full;
-    const rootIndex = NOTES.indexOf(chordRoot);
-    const compatibleScales = [];
-
-    for (const scaleType in SCALES_DATA) {
-        for (const mode of SCALES_DATA[scaleType].modes) {
-            const modeIntervals = mode.intervals;
-            let isCompatible = true;
-            let tensionText = [];
-
-            // 1. Checa a compatibilidade com os tons essenciais (R, 3, 5, 7)
-            for (const interval of targetIntervals) {
-                const requiredChromaticIndex = (rootIndex + interval) % 12;
-                
-                // Transpõe a escala para a tônica do acorde (chordRoot)
-                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
-
-                if (!modeTones.includes(requiredChromaticIndex)) {
-                    isCompatible = false;
-                    break;
-                }
-            }
-            
-            // 2. Coleta as tensões (9ª, 11ª, 13ª e Alteradas)
-            if (isCompatible) {
-                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
-                const tensions = [2, 5, 9]; // 9, 11, 13
-                
-                // Mapeamento de intervalo semitom para nome de tensão
-                const tensionMap = { 1: 'b9', 2: '9', 3: '#9', 5: '11', 6: '#11', 8: 'b13', 9: '13' };
-                
-                for (let i = 1; i <= 11; i++) { // Checa todos os 12 semitons
-                    if (!targetIntervals.includes(i)) {
-                        const requiredChromaticIndex = (rootIndex + i) % 12;
-                        if (modeTones.includes(requiredChromaticIndex)) {
-                            // Calcula o intervalo da tensão em relação ao root
-                            let tensionInterval = (requiredChromaticIndex - rootIndex + 12) % 12;
-                            if (tensionMap[tensionInterval]) {
-                                tensionText.push(tensionMap[tensionInterval]);
-                            }
-                        }
-                    }
-                }
-                
-                let color = tensionText.length > 0 ? `T: ${tensionText.join(', ')}` : 'Padrão Diatônico';
-                let contextual = false;
-                
-                // Identifica as High-Priority/Contextual Scales
-                if (analyzedQuality.includes('Maj') && (mode.key === 'major' || mode.key === 'lydian')) { contextual = true; }
-                else if (analyzedQuality.includes('m') && (mode.key === 'dorian' || mode.key === 'aeolian')) { contextual = true; }
-                else if (analyzedQuality.includes('7') && (mode.key === 'mixolydian' || mode.key === 'lydian_flat7' || mode.key === 'superlocrian')) { contextual = true; }
-                else if (analyzedQuality.includes('m7(b5)') && (mode.key === 'locrian' || mode.key === 'locrian_sharp2')) { contextual = true; }
-
-                compatibleScales.push({
-                    name: mode.name,
-                    note: chordRoot,
-                    color: color,
-                    contextual: contextual 
-                });
-            }
-        }
-    }
-    
-    // Ordena: contextual primeiro, depois por nome
-    compatibleScales.sort((a, b) => {
-        if (a.contextual !== b.contextual) {
-            return b.contextual - a.contextual; 
-        }
-        return a.name.localeCompare(b.name);
-    });
-
-    return compatibleScales;
-}
-
-/**
- * Analisa a progressão gerada para sugerir escalas de improviso para cada acorde.
- */
-function analyzeProgression(progressionArray, settings) {
-    const allChords = progressionArray.flatMap(measure => measure.split(/\s+/).filter(c => c.length > 0));
-    const uniqueChords = [...new Set(allChords)];
-    
-    const analysis = {};
-    
-    uniqueChords.forEach(chord => {
-        analysis[chord] = getSuggestedImproScales(chord, settings.modeKey, settings.rootNote);
-    });
-    
-    return analysis;
-}
-
-// =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
-// =======================================================
-// ... (populateSelect, populateRootSelect, populateScaleSelect, updateModeSelect, document.addEventListener) ...
 function weightedRandomSelection(rules) {
     const totalWeight = rules.reduce((sum, rule) => sum + rule.chance, 0);
     let randomNum = Math.random() * totalWeight; 
@@ -330,6 +166,146 @@ function standardizeAccidentals(note, accidentalsType) {
     }
     return note;
 }
+
+// Lógica de Sugestão de Improviso (Mantida)
+function getChordIntervals(quality) {
+    if (quality.includes('Maj7') || quality.includes('Maj9') || quality.includes('Maj13')) {
+        return { essential: [0, 4, 7], full: [0, 4, 7, 11] }; 
+    }
+    if (quality.includes('mMaj7')) {
+        return { essential: [0, 3, 7], full: [0, 3, 7, 11] }; 
+    }
+    if (quality.includes('m7') || quality.includes('m9') || quality.includes('m11') || quality.includes('m13')) {
+        return { essential: [0, 3, 7], full: [0, 3, 7, 10] }; 
+    }
+    if (quality.includes('7') || quality.includes('9') || quality.includes('13')) {
+        return { essential: [0, 4, 7], full: [0, 4, 7, 10] }; 
+    }
+    if (quality.includes('m7(b5)')) {
+        return { essential: [0, 3, 6], full: [0, 3, 6, 10] }; 
+    }
+    if (quality.includes('dim7')) {
+        return { essential: [0, 3, 6], full: [0, 3, 6, 9] }; 
+    }
+    if (quality.includes('Aug') || quality.includes('(#5)')) {
+        return { essential: [0, 4, 8], full: [0, 4, 8, 11] }; 
+    }
+    if (quality.includes('sus')) {
+        return { essential: [0, 7], full: [0, 5, 7, 10] }; 
+    }
+    if (quality === 'Maj' || quality === '') {
+        return { essential: [0, 4, 7], full: [0, 4, 7] }; 
+    }
+    if (quality === 'm') {
+        return { essential: [0, 3, 7], full: [0, 3, 7] }; 
+    }
+    return { essential: [0, 4, 7], full: [0, 4, 7] }; 
+}
+
+function getSuggestedImproScales(fullChord, baseModeKey, baseRoot) {
+    const chordMatch = fullChord.match(/([A-G][#b]?)([A-Za-z0-9()#b]*)/);
+    if (!chordMatch) return [];
+
+    const chordRoot = chordMatch[1];
+    const rawQuality = chordMatch[2].replace(/[()]/g, '').split('/')[0]; 
+    
+    let analyzedQuality = rawQuality;
+    if (analyzedQuality === 'Maj' || analyzedQuality === '') analyzedQuality = 'Maj7';
+    if (analyzedQuality === 'm') analyzedQuality = 'm7';
+    
+    if (rawQuality.includes('Quartal') || rawQuality.includes('Quintal')) {
+        return [{ 
+            name: getModeName(baseModeKey), 
+            note: baseRoot, 
+            contextual: true, 
+            color: 'Siga o Modo Gerador', 
+            modeKey: baseModeKey 
+        }];
+    }
+
+    const targetIntervals = getChordIntervals(analyzedQuality).full;
+    const rootIndex = NOTES.indexOf(chordRoot);
+    const compatibleScales = [];
+
+    for (const scaleType in SCALES_DATA) {
+        for (const mode of SCALES_DATA[scaleType].modes) {
+            const modeIntervals = mode.intervals;
+            let isCompatible = true;
+            let tensionText = [];
+
+            for (const interval of targetIntervals) {
+                const requiredChromaticIndex = (rootIndex + interval) % 12;
+                
+                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
+
+                if (!modeTones.includes(requiredChromaticIndex)) {
+                    isCompatible = false;
+                    break;
+                }
+            }
+            
+            if (isCompatible) {
+                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
+                const tensionMap = { 1: 'b9', 2: '9', 3: '#9', 5: '11', 6: '#11', 8: 'b13', 9: '13' };
+                
+                for (let i = 1; i <= 11; i++) { 
+                    if (!targetIntervals.includes(i)) {
+                        const requiredChromaticIndex = (rootIndex + i) % 12;
+                        if (modeTones.includes(requiredChromaticIndex)) {
+                            let tensionInterval = (requiredChromaticIndex - rootIndex + 12) % 12;
+                            if (tensionMap[tensionInterval]) {
+                                tensionText.push(tensionMap[tensionInterval]);
+                            }
+                        }
+                    }
+                }
+                
+                let color = tensionText.length > 0 ? `T: ${tensionText.join(', ')}` : 'Padrão Diatônico';
+                let contextual = false;
+                
+                if (analyzedQuality.includes('Maj') && (mode.key === 'major' || mode.key === 'lydian')) { contextual = true; }
+                else if (analyzedQuality.includes('m') && (mode.key === 'dorian' || mode.key === 'aeolian')) { contextual = true; }
+                else if (analyzedQuality.includes('7') && (mode.key === 'mixolydian' || mode.key === 'lydian_flat7' || mode.key === 'superlocrian')) { contextual = true; }
+                else if (analyzedQuality.includes('m7(b5)') && (mode.key === 'locrian' || mode.key === 'locrian_sharp2')) { contextual = true; }
+
+                compatibleScales.push({
+                    name: mode.name,
+                    note: chordRoot,
+                    color: color,
+                    contextual: contextual 
+                });
+            }
+        }
+    }
+    
+    compatibleScales.sort((a, b) => {
+        if (a.contextual !== b.contextual) {
+            return b.contextual - a.contextual; 
+        }
+        return a.name.localeCompare(b.name);
+    });
+
+    return compatibleScales;
+}
+
+function analyzeProgression(progressionArray, settings) {
+    const allChords = progressionArray.flatMap(measure => measure.split(/\s+/).filter(c => c.length > 0));
+    const uniqueChords = [...new Set(allChords)];
+    
+    const analysis = {};
+    
+    uniqueChords.forEach(chord => {
+        analysis[chord] = getSuggestedImproScales(chord, settings.modeKey, settings.rootNote);
+    });
+    
+    return analysis;
+}
+
+// =======================================================
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
+// =======================================================
+let currentProgression = []; 
+let currentSettings = {}; 
 
 function populateSelect(selectId, optionsMap) {
     const select = document.getElementById(selectId);
@@ -450,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
 // =======================================================
-// ... (determineRootAtonal, determineRootModal, determineRootFunctional, determineRootJazz, determineRoot) ...
 
 function determineRootAtonal() {
     return getRandomElement(NOTES);
@@ -528,7 +503,7 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade ---
+// --- Módulo 2B: Determinação da Qualidade (CORRIGIDO) ---
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
@@ -558,24 +533,34 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     
     let quality = '';
 
+    // 1. Determinação da Terça (Maior/Menor/Sus)
     if (third === 3) { quality = 'm'; } 
     else if (third === 4) { quality = 'Maj'; } 
     else if (third === -1 || third !== 3 && third !== 4) { quality = 'sus'; } 
 
+    // 2. Determinação da Quinta (Perfeita/Aumentada/Diminuta)
     if (fifth === 6) { quality += '(b5)'; } 
     else if (fifth === 8) { quality += '(#5)'; } 
     
+    // 3. Determinação da Sétima (Maj7/7/Dim)
     if (seventh === 10) { quality += '7'; } 
     else if (seventh === 11) { quality += 'Maj7'; } 
     else if (seventh === 9) { quality += 'dim7'; } 
     
+    // Ajustes finais para tríades puras
+    if (seventh === -1) { 
+        if (quality === 'Maj') return ''; // Tríade Maior Pura (Ex: C)
+        if (quality === 'm') return 'm'; // Tríade Menor Pura (Ex: Cm)
+    }
+
     if (quality.includes('sus')) {
         if (quality.includes('7')) return '7sus4';
         if (fifth === -1) return '5'; 
         return 'sus'; 
     }
     
-    if (quality === 'Maj') return ''; 
+    // Remove "Maj" da tríade se houver sétima (Ex: Maj7) para não duplicar.
+    // Se a qualidade final for apenas "Maj" (sem 7ª), a regra acima já retorna ''.
     return quality.replace('Maj', ''); 
 }
 
@@ -617,11 +602,23 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        if (baseQuality === '' || baseQuality.includes('sus')) return baseQuality;
-        if (baseQuality.includes('Maj7')) return 'Maj';
-        if (baseQuality.includes('m7') || baseQuality === 'm') return 'm';
-        if (baseQuality.includes('(b5)')) return 'dim'; 
-        return baseQuality.replace('7', '');
+        // CORRIGIDO: Garante que "m" seja a qualidade retornada para acordes menores (m, m7, mMaj7)
+        
+        if (baseQuality.includes('sus') || baseQuality === '5') return baseQuality;
+        
+        if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7')) {
+             return ''; // Acordes com 3M (Maj, Maj7, 7, 9, 13) viram tríade maior (vazio)
+        }
+        
+        if (baseQuality === 'm' || baseQuality.includes('m7') || baseQuality.includes('mMaj7')) {
+            return 'm'; // Acordes com 3m viram tríade menor ('m')
+        }
+        
+        if (baseQuality.includes('dim')) {
+            return 'dim'; // Acordes diminutos
+        }
+        
+        return baseQuality;
     }
     
     if (sortedLevel === 'Extensao') {
@@ -967,10 +964,8 @@ function updateResults(progressionArray) {
         verticalityP.style.display = 'none';
     }
 
-    // NOVA ANÁLISE DE ESCALAS POR ACORDE
     const analysis = analyzeProgression(progressionArray, currentSettings);
     
-    // Formata o bloco de Sugestões de Improviso
     let improOutput = '';
     for (const chord in analysis) {
         const contextualScales = analysis[chord].filter(s => s.contextual);
@@ -995,7 +990,6 @@ function updateResults(progressionArray) {
     }
     document.getElementById('impro-suggestions').innerText = improOutput.trim();
 
-    // Atualiza o bloco de Cópia Unificada (incluindo as sugestões)
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings, analysis);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 }
