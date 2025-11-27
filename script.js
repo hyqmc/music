@@ -167,7 +167,6 @@ function standardizeAccidentals(note, accidentalsType) {
     return note;
 }
 
-// Lógica de Sugestão de Improviso (Mantida)
 function getChordIntervals(quality) {
     if (quality.includes('Maj7') || quality.includes('Maj9') || quality.includes('Maj13')) {
         return { essential: [0, 4, 7], full: [0, 4, 7, 11] }; 
@@ -559,8 +558,6 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
         return 'sus'; 
     }
     
-    // Remove "Maj" da tríade se houver sétima (Ex: Maj7) para não duplicar.
-    // Se a qualidade final for apenas "Maj" (sem 7ª), a regra acima já retorna ''.
     return quality.replace('Maj', ''); 
 }
 
@@ -602,20 +599,16 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // CORRIGIDO: Garante que "m" seja a qualidade retornada para acordes menores (m, m7, mMaj7)
+        // CORREÇÃO: Garante que "m" seja a qualidade retornada para acordes menores (m, m7, mMaj7)
         
-        if (baseQuality.includes('sus') || baseQuality === '5') return baseQuality;
+        if (baseQuality.includes('sus') || baseQuality === '5' || baseQuality.includes('dim')) return baseQuality;
         
         if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7')) {
              return ''; // Acordes com 3M (Maj, Maj7, 7, 9, 13) viram tríade maior (vazio)
         }
         
-        if (baseQuality === 'm' || baseQuality.includes('m7') || baseQuality.includes('mMaj7')) {
+        if (baseQuality === 'm' || baseQuality.includes('m7') || baseQuality.includes('mMaj7') || baseQuality.includes('(b5)')) {
             return 'm'; // Acordes com 3m viram tríade menor ('m')
-        }
-        
-        if (baseQuality.includes('dim')) {
-            return 'dim'; // Acordes diminutos
         }
         
         return baseQuality;
@@ -711,12 +704,14 @@ function generateProgression() {
     const complexityPool = Array.from(document.querySelectorAll('#complexity-settings input:checked')).map(c => c.value);
 
     let baseRoot = document.getElementById('root-note').value;
-    let modeKey = document.getElementById('modal-mode').value;
-    let scaleType = document.getElementById('scale-type').value; 
+    
+    let scaleType = document.getElementById('scale-type').value || 'major_diatonic'; 
+    let modeKey = document.getElementById('modal-mode').value || 'major';
+    
 
     if (scaleType === 'Aleatorio') { 
         const scaleKeys = Object.keys(SCALES_DATA);
-        scaleType = getRandomElement(scaleKeys);
+        scaleType = getRandomElement(scaleKeys) || 'major_diatonic';
         
         const modesInScale = SCALES_DATA[scaleType].modes;
         modeKey = getRandomElement(modesInScale).key;
@@ -729,7 +724,7 @@ function generateProgression() {
         baseRoot = getRandomElement(NOTES);
     }
     
-    if (context !== 'atonal' && (baseRoot === '' || modeKey === '')) {
+    if (context !== 'atonal' && (baseRoot === '' || modeKey === '' || scaleType === '')) {
         alert('Erro: Por favor, selecione a Tonalidade Base e o Modo Específico (ou "Aleatório").');
         return;
     }
