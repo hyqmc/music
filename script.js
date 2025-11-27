@@ -502,7 +502,7 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade (CORRIGIDO) ---
+// --- Módulo 2B: Determinação da Qualidade (Mantida a lógica de base) ---
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
@@ -599,19 +599,26 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // CORREÇÃO: Garante que "m" seja a qualidade retornada para acordes menores (m, m7, mMaj7)
+        // --- CORREÇÃO CRÍTICA: PRIORIZAR A VERIFICAÇÃO DE ACORDES MENORES (M7, M9, M7(B5), Mmaj7) ---
         
-        if (baseQuality.includes('sus') || baseQuality === '5' || baseQuality.includes('dim')) return baseQuality;
+        // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5, dim)
+        if (baseQuality.includes('sus') || baseQuality === '5') {
+            return baseQuality;
+        }
+
+        // 2. VERIFICA QUALIDADE MENOR/DIMINUTA
+        if (baseQuality.includes('m') || baseQuality.includes('(b5)') || baseQuality.includes('dim')) {
+             if (baseQuality.includes('dim')) return 'dim'; 
+             return 'm'; // Retorna 'm' para Dm7, EmMaj7, Cdim, etc.
+        }
         
+        // 3. VERIFICA QUALIDADE MAIOR (Inclui a simplificação de Maj7, 7, 9, 13)
+        // Se for Maj, Maj7, 7 ou '' (tríade maior pura), retorna '' (tríade maior)
         if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7')) {
-             return ''; // Acordes com 3M (Maj, Maj7, 7, 9, 13) viram tríade maior (vazio)
+             return ''; 
         }
         
-        if (baseQuality === 'm' || baseQuality.includes('m7') || baseQuality.includes('mMaj7') || baseQuality.includes('(b5)')) {
-            return 'm'; // Acordes com 3m viram tríade menor ('m')
-        }
-        
-        return baseQuality;
+        return baseQuality; // Fallback
     }
     
     if (sortedLevel === 'Extensao') {
@@ -977,8 +984,7 @@ function updateResults(progressionArray) {
         
         if (otherScales.length > 0) {
              improOutput += `  > OUTRAS OPÇÕES:\n`;
-             otherScales.forEach(scale => {
-                 improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
+             otherOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
              });
         }
         improOutput += '\n'; 
