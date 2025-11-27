@@ -7,7 +7,7 @@
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
         h1, h2, h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
-        .btn-acao { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
+        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
         #complexidade-opcoes label { margin-right: 15px; display: inline-block; }
     </style>
 </head>
@@ -75,15 +75,24 @@
 
     <hr/>
 
+    <h2>Progressão com Substituições Interativas</h2>
+    <div id="progressao-com-botoes">
+        </div>
+    
     <script>
         // --- INICIALIZAÇÃO DA UI E LÓGICA DE DADOS ---
         
         const gerador = new GeradorDeProgressao({});
         let progressao_ativa = null;
 
-        function preencherSelect(id, dados, valor = 'value', texto = 'text') {
+        function preencherSelect(id, dados, valor = 'value', texto = 'text', incluirAleatorio = false) {
             const select = document.getElementById(id);
             select.innerHTML = '';
+            
+            if (incluirAleatorio) {
+                 select.innerHTML = '<option value="Aleatório">Aleatório</option>';
+            }
+            
             dados.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item[valor] || item;
@@ -96,18 +105,19 @@
             const escalaNome = document.getElementById('escala-geradora').value;
             const escala = ESCALAS[escalaNome];
             if (escala) {
-                preencherSelect('modo-ativo', escala.modos, 'nome', 'nome');
+                preencherSelect('modo-ativo', escala.modos, 'nome', 'nome', true); // Adiciona Aleatório
             }
         }
         
         function inicializarUI() {
-            // Preenchimento de listas
-            preencherSelect('tonalidade-base', NOTAS);
-            preencherSelect('transpor-para', NOTAS);
-            preencherSelect('escala-geradora', Object.keys(ESCALAS));
+            // Adiciona "Aleatório" como padrão
+            preencherSelect('tonalidade-base', NOTAS, 'value', 'text', true);
+            preencherSelect('transpor-para', NOTAS, 'value', 'text', true);
+
+            preencherSelect('escala-geradora', Object.keys(ESCALAS), 'value', 'text', true);
             document.getElementById('escala-geradora').addEventListener('change', preencherModos);
             preencherModos();
-            preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text');
+            preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text', true);
         }
         
         // --- GESTÃO DE AÇÕES ---
@@ -116,9 +126,12 @@
             const escalaNome = document.getElementById('escala-geradora').value;
             const modoNome = document.getElementById('modo-ativo').value;
             const escalaObj = ESCALAS[escalaNome];
-            const modoObj = escalaObj.modos.find(m => m.nome === modoNome);
+            
+            // Verifica se o modo ativo não é 'Aleatório' e o encontra
+            const modoObj = (modoNome !== 'Aleatório' && escalaObj) 
+                ? escalaObj.modos.find(m => m.nome === modoNome) 
+                : null; // Se for Aleatório, o Gerador.js lida
 
-            // CORRIGIDO: Coleta todos os valores dos checkboxes com o mesmo nome
             const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
 
             return {
@@ -126,31 +139,29 @@
                 contexto: document.getElementById('contexto-gerador').value,
                 escala: escalaNome,
                 modo: modoNome,
-                escala_ativa: modoObj,
+                escala_ativa: modoObj, // Pode ser null se for Aleatório
                 ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                complexidade: complexidadeSelecionada, // Array de todos os tipos marcados
-                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords') // Bool baseado no array
+                complexidade: complexidadeSelecionada, 
+                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
             };
         }
 
         function gerarNovaProgressao() {
             try {
                 gerador.config = getConfigAtual();
-                gerador.escala_ativa = gerador.config.escala_ativa;
                 
                 const resultado = gerador.gerarProgressao();
                 progressao_ativa = resultado;
                 
                 document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
-                alert("Progressão Gerada com Sucesso! (Verifique a área cifrada)");
+                alert("Progressão Gerada com Sucesso!");
                 
             } catch (e) {
                 console.error("Erro na geração:", e);
                 document.getElementById('cifragem-texto').textContent = `ERRO: Não foi possível gerar a progressão. Verifique o console. Detalhe: ${e.message}`;
             }
         }
-
-        // Simulação da Transposição UI (Requer que transporProgressao exista em Gerador.js)
+        
         function transporProgressaoUI() {
             const nova_tonalidade = document.getElementById('transpor-para').value;
             if (!progressao_ativa || !progressao_ativa.progressao) return alert("Gere uma progressão primeiro.");
@@ -172,7 +183,6 @@
             });
         }
         
-        // Chamada de inicialização
         window.onload = inicializarUI;
     </script>
 </body>
