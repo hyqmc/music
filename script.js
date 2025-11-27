@@ -6,37 +6,50 @@ const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
-// Mapeamento de equivalências para padronização enharmônica (Correção de F# / Ab)
+// NOVO: Estrutura aninhada para Escalas -> Modos
+const SCALES_DATA = {
+    'major_diatonic': {
+        name: 'Maior (Diatônica)',
+        modes: [
+            { key: 'major', name: 'Jônio (Maior)', intervals: [0, 2, 4, 5, 7, 9, 11] },
+            { key: 'dorian', name: 'Dórico', intervals: [0, 2, 3, 5, 7, 9, 10] },
+            { key: 'phrygian', name: 'Frígio', intervals: [0, 1, 3, 5, 7, 8, 10] },
+            { key: 'lydian', name: 'Lídio', intervals: [0, 2, 4, 6, 7, 9, 11] },
+            { key: 'mixolydian', name: 'Mixolídio', intervals: [0, 2, 4, 5, 7, 9, 10] },
+            { key: 'aeolian', name: 'Eólio (Menor Natural)', intervals: [0, 2, 3, 5, 7, 8, 10] },
+            { key: 'locrian', name: 'Lócrio', intervals: [0, 1, 3, 5, 6, 8, 10] },
+        ]
+    },
+    'harmonic_minor': {
+        name: 'Menor Harmônica',
+        modes: [
+            { key: 'harmonic_minor', name: 'Menor Harmônica', intervals: [0, 2, 3, 5, 7, 8, 11] },
+            { key: 'locrian_sharp6', name: 'Lócrio ♯6', intervals: [0, 1, 3, 5, 6, 9, 10] },
+            { key: 'ionian_sharp5', name: 'Jônio ♯5', intervals: [0, 2, 4, 5, 8, 9, 11] },
+            { key: 'dorian_sharp4', name: 'Dórico ♯4 (Ukrainiana)', intervals: [0, 2, 3, 6, 7, 9, 10] },
+            { key: 'phrygian_dominant', name: 'Frígio Dominante', intervals: [0, 1, 4, 5, 7, 8, 10] },
+            { key: 'lydian_sharp2', name: 'Lídio ♯2', intervals: [0, 3, 4, 6, 7, 9, 11] },
+            { key: 'superlocrian_bb7', name: 'Superlócrio ♭♭7', intervals: [0, 1, 3, 4, 6, 8, 9] }, 
+        ]
+    },
+    'melodic_minor': {
+        name: 'Menor Melódica (Jazz)',
+        modes: [
+            { key: 'melodic_minor', name: 'Menor Melódica (Jazz)', intervals: [0, 2, 3, 5, 7, 9, 11] },
+            { key: 'dorian_flat2', name: 'Dórico ♭2', intervals: [0, 1, 3, 5, 7, 9, 10] },
+            { key: 'lydian_sharp5', name: 'Lídio ♯5', intervals: [0, 2, 4, 6, 8, 9, 11] },
+            { key: 'lydian_flat7', name: 'Lídio ♭7', intervals: [0, 2, 4, 6, 7, 9, 10] },
+            { key: 'mixolydian_flat6', name: 'Mixolídio ♭6', intervals: [0, 2, 4, 5, 7, 8, 10] },
+            { key: 'locrian_sharp2', name: 'Lócrio ♯2', intervals: [0, 2, 3, 5, 6, 8, 10] },
+            { key: 'superlocrian', name: 'Superlócrio (Alterada)', intervals: [0, 1, 3, 4, 6, 8, 10] }, 
+        ]
+    }
+};
+
+// Mapeamento de equivalências para padronização enharmônica
 const ENHARMONIC_MAP = {
     'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
     'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
-};
-
-const MODE_NAMES = {
-    'major': 'Jônio (Maior)', 'dorian': 'Dórico', 'phrygian': 'Frígio', 'lydian': 'Lídio',
-    'mixolydian': 'Mixolídio', 'aeolian': 'Eólio (Menor Natural)', 'locrian': 'Lócrio',
-    'harmonic_minor': 'Menor Harmônica', 'locrian_sharp6': 'Lócrio ♯6',
-    'ionian_sharp5': 'Jônio ♯5', 'dorian_sharp4': 'Dórico ♯4 (Ukrainiana)',
-    'phrygian_dominant': 'Frígio Dominante', 'lydian_sharp2': 'Lídio ♯2',
-    'superlocrian_bb7': 'Superlócrio ♭♭7',
-    'melodic_minor': 'Menor Melódica (Jazz)', 'dorian_flat2': 'Dórico ♭2',
-    'lydian_sharp5': 'Lídio ♯5', 'lydian_flat7': 'Lídio ♭7',
-    'mixolydian_flat6': 'Mixolídio ♭6', 'locrian_sharp2': 'Lócrio ♯2',
-    'superlocrian': 'Superlócrio (Alterada)',
-};
-
-const ALL_MODES_INTERVALS = {
-    'major': [0, 2, 4, 5, 7, 9, 11], 'dorian': [0, 2, 3, 5, 7, 9, 10], 'phrygian': [0, 1, 3, 5, 7, 8, 10],
-    'lydian': [0, 2, 4, 6, 7, 9, 11], 'mixolydian': [0, 2, 4, 5, 7, 9, 10], 'aeolian': [0, 2, 3, 5, 7, 8, 10],
-    'locrian': [0, 1, 3, 5, 6, 8, 10],
-    'harmonic_minor': [0, 2, 3, 5, 7, 8, 11], 'locrian_sharp6': [0, 1, 3, 5, 6, 9, 10],
-    'ionian_sharp5': [0, 2, 4, 5, 8, 9, 11], 'dorian_sharp4': [0, 2, 3, 6, 7, 9, 10], 
-    'phrygian_dominant': [0, 1, 4, 5, 7, 8, 10], 'lydian_sharp2': [0, 3, 4, 6, 7, 9, 11],
-    'superlocrian_bb7': [0, 1, 3, 4, 6, 8, 9], 
-    'melodic_minor': [0, 2, 3, 5, 7, 9, 11], 'dorian_flat2': [0, 1, 3, 5, 7, 9, 10],
-    'lydian_sharp5': [0, 2, 4, 6, 8, 9, 11], 'lydian_flat7': [0, 2, 4, 6, 7, 9, 10],
-    'mixolydian_flat6': [0, 2, 4, 5, 7, 8, 10], 'locrian_sharp2': [0, 2, 3, 5, 6, 8, 10],
-    'superlocrian': [0, 1, 3, 4, 6, 8, 10], 
 };
 
 const QUALITIES = {
@@ -78,9 +91,28 @@ function getRandomElement(pool) {
     return pool[randomIndex];
 }
 
+function getModeIntervals(modeKey) {
+    for (const scaleKey in SCALES_DATA) {
+        const modes = SCALES_DATA[scaleKey].modes;
+        const foundMode = modes.find(m => m.key === modeKey);
+        if (foundMode) return foundMode.intervals;
+    }
+    // Retorna Jônio como fallback
+    return SCALES_DATA.major_diatonic.modes[0].intervals; 
+}
+
+function getModeName(modeKey) {
+    for (const scaleKey in SCALES_DATA) {
+        const modes = SCALES_DATA[scaleKey].modes;
+        const foundMode = modes.find(m => m.key === modeKey);
+        if (foundMode) return foundMode.name;
+    }
+    return 'Modo Desconhecido';
+}
+
 function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     const baseRootIndex = NOTES.indexOf(baseRoot);
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey] || ALL_MODES_INTERVALS['major'];
+    const modeIntervals = getModeIntervals(modeKey) || SCALES_DATA.major_diatonic.modes[0].intervals;
     const intervalSemitones = modeIntervals[intervalIndex]; 
     const noteIndex = (baseRootIndex + intervalSemitones) % NOTES.length;
     return NOTES[noteIndex];
@@ -88,9 +120,6 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
 
 /**
  * Garante que a notação do acorde (raiz e baixo) seja consistente (só # ou só b).
- * @param {string} note - Nota gerada (Ex: 'Ab' ou 'C#').
- * @param {string} accidentalsType - 'sharp' ou 'flat' (baseado na Tonalidade Raiz).
- * @returns {string} A nota com a grafia padronizada.
  */
 function standardizeAccidentals(note, accidentalsType) {
     const isSharp = note.includes('#');
@@ -136,21 +165,61 @@ function populateRootSelect() {
     populateSelect('root-note', roots);
 }
 
-function populateModeSelect() {
-    const modes = {};
-    for (const key in MODE_NAMES) {
-        modes[key] = MODE_NAMES[key];
+function populateScaleSelect() {
+    const scaleSelect = document.getElementById('scale-type');
+    scaleSelect.innerHTML = '';
+
+    let randomOption = document.createElement('option');
+    randomOption.value = 'Aleatorio';
+    randomOption.textContent = 'Aleatório';
+    scaleSelect.appendChild(randomOption);
+    
+    for (const key in SCALES_DATA) {
+        let option = document.createElement('option');
+        option.value = key;
+        option.textContent = SCALES_DATA[key].name;
+        scaleSelect.appendChild(option);
     }
-    populateSelect('modal-mode', modes);
+    updateModeSelect(Object.keys(SCALES_DATA)[0]); 
+}
+
+function updateModeSelect(selectedScaleKey) {
+    const modeSelect = document.getElementById('modal-mode');
+    modeSelect.innerHTML = '';
+    
+    let randomOption = document.createElement('option');
+    randomOption.value = 'Aleatorio';
+    randomOption.textContent = 'Aleatório';
+    modeSelect.appendChild(randomOption);
+
+    if (selectedScaleKey === 'Aleatorio' || !SCALES_DATA[selectedScaleKey]) {
+        // Se 'Aleatório' ou escala inválida, lista todos os modos de 'Maior'
+        selectedScaleKey = 'major_diatonic'; 
+    }
+    
+    const modes = SCALES_DATA[selectedScaleKey].modes;
+    
+    modes.forEach(mode => {
+        let option = document.createElement('option');
+        option.value = mode.key;
+        option.textContent = mode.name;
+        modeSelect.appendChild(option);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     populateRootSelect();
-    populateModeSelect(); 
+    populateScaleSelect(); 
     
     const contextSelect = document.getElementById('tonality-context');
+    const scaleSelect = document.getElementById('scale-type'); 
     const tonalSelectsDiv = document.getElementById('tonal-selects');
     const verticalitySelectDiv = document.getElementById('verticality-select');
+
+    // Listener para o seletor de Escala (dependência)
+    scaleSelect.addEventListener('change', (event) => {
+        updateModeSelect(event.target.value);
+    });
 
     contextSelect.addEventListener('change', () => {
         const context = contextSelect.value;
@@ -161,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tonalSelectsDiv.style.display = isAtonal ? 'none' : 'block';
         
         document.getElementById('modal-mode-select').style.display = isAtonal ? 'none' : 'block';
+        document.getElementById('scale-type-select').style.display = isAtonal ? 'none' : 'block'; 
     });
 
     document.getElementById('generate-button').addEventListener('click', generateProgression);
@@ -196,7 +266,7 @@ function determineRootAtonal() {
 
 function determineRootModal(baseRoot, prevRoot, modeKey) {
     const baseRootIndex = NOTES.indexOf(baseRoot);
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+    const modeIntervals = getModeIntervals(modeKey);
 
     const diatonicNotes = modeIntervals.map(interval => {
         const noteIndex = (baseRootIndex + interval) % NOTES.length;
@@ -213,7 +283,6 @@ function determineRootModal(baseRoot, prevRoot, modeKey) {
     }
     return prevRoot;
 }
-
 
 function determineRootFunctional(baseRoot, prevRoot) {
     if (!prevRoot) { return baseRoot; }
@@ -267,13 +336,17 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade (Lógica Diatônica) ---
+// --- Módulo 2B: Determinação da Qualidade ---
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
+    const modeIntervals = getModeIntervals(modeKey); 
     
     const getChromaticInterval = (degreeIndex) => {
         const indexInMode = (rootIntervalIndex + degreeIndex) % 7;
+        
+        // Se o modo não tiver 7 notas, usamos a 5ª justa como fallback
+        if (indexInMode >= modeIntervals.length) return 7; 
+        
         const interval = modeIntervals[indexInMode];
         const rootInterval = modeIntervals[rootIntervalIndex];
         return (interval - rootInterval + 12) % 12;
@@ -334,7 +407,8 @@ function determineQuality(root, context, settings) {
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const semitonesFromRoot = (rootIndex - baseRootIndex + 12) % 12;
     
-    let rootIntervalIndex = ALL_MODES_INTERVALS[modeKey].indexOf(semitonesFromRoot);
+    const modeIntervals = getModeIntervals(modeKey);
+    let rootIntervalIndex = modeIntervals.indexOf(semitonesFromRoot);
 
     let baseQuality = '7'; 
     if (rootIntervalIndex !== -1) {
@@ -439,10 +513,14 @@ function generateProgression() {
 
     let baseRoot = document.getElementById('root-note').value;
     let modeKey = document.getElementById('modal-mode').value;
+    let scaleType = document.getElementById('scale-type').value; 
 
-    if (modeKey === 'Aleatorio') {
-        const allModes = Object.keys(ALL_MODES_INTERVALS);
-        modeKey = getRandomElement(allModes);
+    if (modeKey === 'Aleatorio' || scaleType === 'Aleatorio') { 
+        const scaleKeys = Object.keys(SCALES_DATA);
+        scaleType = getRandomElement(scaleKeys);
+        
+        const modesInScale = SCALES_DATA[scaleType].modes;
+        modeKey = getRandomElement(modesInScale).key;
     }
     
     if (baseRoot === 'Aleatorio') {
@@ -458,6 +536,7 @@ function generateProgression() {
         context,
         rootNote: baseRoot,
         modeKey: modeKey,
+        scaleType: scaleType, 
         verticality: document.getElementById('modal-verticality').value,
         customNotes: '',
         complexityPool,
@@ -470,7 +549,6 @@ function generateProgression() {
         return;
     }
 
-    // Determina o tipo de acidente para a padronização: 'sharp' se a raiz tiver #, 'flat' se tiver b
     let accidentalsType = baseRoot.includes('b') ? 'flat' : 'sharp';
 
     const progression = [];
@@ -487,13 +565,11 @@ function generateProgression() {
             let bass = coloring.bass; 
             let tensions = coloring.tensions; 
             
-            // Padroniza a raiz e o baixo antes de construir a cifra
             root = standardizeAccidentals(root, accidentalsType);
             if (bass.includes('/')) {
                 const bassNote = bass.split('/')[1];
                 bass = '/' + standardizeAccidentals(bassNote, accidentalsType);
             }
-
 
             if (quality.includes('Quartal') || quality.includes('Quintal')) {
                  quality = `^${quality}`; 
@@ -550,18 +626,16 @@ function transposeProgression(progressionArray, semitones) {
 }
 
 function standardizeScaleSpelling(baseRoot, modeKey) {
+    const modeIntervals = getModeIntervals(modeKey); 
     const rootChromaIndex = NOTES.indexOf(baseRoot);
-    const modeIntervals = ALL_MODES_INTERVALS[modeKey];
-    
-    const chromaIndices = modeIntervals.map(interval => (rootChromaIndex + interval) % 12);
-    
     const rootLetter = baseRoot.charAt(0);
     const rootLetterIndex = BASE_NOTE_MAP.indexOf(rootLetter);
     
     const finalNotes = [];
 
     for (let i = 0; i < 7; i++) {
-        const targetChromaIndex = chromaIndices[i];
+        const intervalSemitones = modeIntervals[i];
+        const targetChromaIndex = (rootChromaIndex + intervalSemitones) % 12;
         const expectedLetter = BASE_NOTE_MAP[(rootLetterIndex + i) % 7];
         
         let naturalIndex = NOTES.indexOf(expectedLetter);
@@ -589,7 +663,7 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
 
     const notes = standardizeScaleSpelling(baseRoot, modeKey);
     
-    let scaleName = MODE_NAMES[modeKey];
+    let scaleName = getModeName(modeKey); 
     if (context === 'tonal-jazz') scaleName = `Base Jazz: ${scaleName}`;
 
     return `${scaleName} (${baseRoot}): ${notes}`;
@@ -599,12 +673,9 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
  * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
  */
 function createUnifiedOutput(progressionArray, settings) {
-    const { context, rootNote, modeKey, verticality } = settings;
+    const { context, rootNote, modeKey, verticality, scaleType } = settings;
     
-    // 1. Progressão Cifrada Formatada
     const formattedProgression = progressionArray.map(measure => `| ${measure} `).join('') + '|';
-
-    // 2. Geração da Análise
     const suggestedScaleText = getSuggestedScale(rootNote, modeKey, context, settings.customNotes);
     
     let output = '';
@@ -618,14 +689,14 @@ function createUnifiedOutput(progressionArray, settings) {
     output += `Contexto: ${context.replace('-', ' ')}\n`;
     
     if (context !== 'atonal') {
+        output += `Escala Base: ${SCALES_DATA[scaleType].name}\n`;
         output += `Tonalidade Raiz: ${rootNote}\n`;
-        output += `Modo: ${MODE_NAMES[modeKey]}\n`;
+        output += `Modo: ${getModeName(modeKey)}\n`;
         
         if (context === 'modal-pura' && verticality !== 'tercas') {
             output += `Verticalidade: ${verticality}\n`;
         }
         
-        // Inclui a escala sugerida (apenas as notas)
         output += `Escala Sugerida: ${suggestedScaleText.split(': ')[1]}\n`;
     } else {
          output += `Escala Sugerida: ${suggestedScaleText}\n`;
@@ -643,7 +714,6 @@ function updateResults(progressionArray) {
     const modeKey = currentSettings.modeKey;
     const verticality = currentSettings.verticality;
 
-    // 1. Atualiza a Progressão Visível (Bloco 1)
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
     document.getElementById('visual-progression').innerText = formattedProgression;
     
@@ -651,12 +721,12 @@ function updateResults(progressionArray) {
     document.getElementById('keyboard-removed-notice').textContent = 'Visualização do teclado removida por solicitação.';
 
 
-    // 3. Atualiza o Sumário (Visual) 
+    // Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
     document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
     document.getElementById('out-root').innerText = baseRoot; 
-    document.getElementById('out-mode').innerText = MODE_NAMES[modeKey];
+    document.getElementById('out-mode').innerText = getModeName(modeKey);
 
     const verticalityP = document.getElementById('out-verticality-p');
     const isModalVertical = currentSettings.context === 'modal-pura' && verticality !== 'tercas';
@@ -668,7 +738,6 @@ function updateResults(progressionArray) {
         verticalityP.style.display = 'none';
     }
 
-    // 4. Atualiza a Saída de Cópia (Bloco 3)
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 }
