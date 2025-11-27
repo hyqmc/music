@@ -16,7 +16,7 @@
         .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; text-align: center; }
         .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.2em; display: block; margin-bottom: 5px; }
         .substituicao-area { margin-top: 5px; border-top: 1px dashed #eee; padding-top: 5px; }
-        .sub-opcoes-dropdown { border: 1px solid #ccc; padding: 5px; margin-top: 5px; text-align: left; }
+        .sub-opcoes-dropdown { border: 1px solid #ccc; padding: 5px; margin-top: 5px; text-align: left; display: none; } /* Inicialmente escondido */
     </style>
 </head>
 <body>
@@ -71,16 +71,18 @@
 
         <hr/>
         
-        <h3>4. Pesos e Probabilidades (Tonal Fixo)</h3>
-        <div id="pesos-sliders">
-            <label>Tônica (I, III, VI):</label>
-            <input type="range" id="peso-tonica" min="10" max="80" value="45"> <span id="val-tonica">45%</span><br>
-            
-            <label>Dominante (V, VII):</label>
-            <input type="range" id="peso-dominante" min="10" max="80" value="35"> <span id="val-dominante">35%</span><br>
-            
-            <label>Subdominante (II, IV):</label>
-            <input type="range" id="peso-subdominante" min="10" max="80" value="20"> <span id="val-subdominante">20%</span><br>
+        <div id="painel-pesos">
+            <h3>4. Pesos e Probabilidades (Tonal Fixo)</h3>
+            <div id="pesos-sliders">
+                <label>Tônica (I, III, VI):</label>
+                <input type="range" id="peso-tonica" min="10" max="80" value="45"> <span id="val-tonica">45%</span><br>
+                
+                <label>Dominante (V, VII):</label>
+                <input type="range" id="peso-dominante" min="10" max="80" value="35"> <span id="val-dominante">35%</span><br>
+                
+                <label>Subdominante (II, IV):</label>
+                <input type="range" id="peso-subdominante" min="10" max="80" value="20"> <span id="val-subdominante">20%</span><br>
+            </div>
         </div>
         
         <hr/>
@@ -121,7 +123,7 @@
         </div>
     
     <script>
-        // --- INICIALIZAÇÃO DA UI E LÓGICA DE DADOS ---
+        // --- CÓDIGO DE CONTROLE DA INTERFACE ---
         
         const gerador = new GeradorDeProgressao({});
         let progressao_ativa = null;
@@ -150,16 +152,35 @@
             }
         }
         
+        function atualizarPainelPesos() {
+            const contexto = document.getElementById('contexto-gerador').value;
+            const painel = document.getElementById('painel-pesos');
+            
+            // Mostra pesos apenas para Tonal Fixo e Tonal Aleatório
+            if (contexto === 'tonal_fixo' || contexto === 'tonal_aleatorio') {
+                painel.style.display = 'block';
+            } else {
+                painel.style.display = 'none';
+            }
+            
+            // Desabilita sliders se for contexto completamente aleatório
+            const isAleatorio = (contexto === 'completamente_aleatorio');
+            document.querySelectorAll('#pesos-sliders input[type="range"]').forEach(slider => {
+                slider.disabled = isAleatorio;
+            });
+        }
+
         function inicializarUI() {
-            // Preenchimento de listas
             preencherSelect('tonalidade-base', NOTAS, 'value', 'text', true);
             preencherSelect('transpor-para', NOTAS, 'value', 'text', true);
-
             preencherSelect('escala-geradora', Object.keys(ESCALAS), 'value', 'text', true);
             document.getElementById('escala-geradora').addEventListener('change', preencherModos);
             preencherModos();
             preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text', true);
             
+            document.getElementById('contexto-gerador').addEventListener('change', atualizarPainelPesos);
+            atualizarPainelPesos(); // Inicializa o estado do painel
+
             // Listener para sliders
             document.addEventListener('input', function (e) {
                 if (e.target.type === 'range') {
@@ -178,28 +199,57 @@
             });
         }
         
-        // --- GESTÃO DE ACORDES E SUBSTITUIÇÕES (CORE INTERATIVO) ---
+        // --- HANDLERS DE AÇÃO ---
 
-        function aplicarNovaCifra(index, novaCifra) {
-            const container = document.querySelector(`.acorde-container[data-index="${index}"] .cifra-principal`);
-            if (container) {
-                 container.textContent = novaCifra;
-                 container.style.backgroundColor = '#ffffcc'; // Destaca a alteração
-            }
+        function getConfigAtual() {
+            const escalaNome = document.getElementById('escala-geradora').value;
+            const modoNome = document.getElementById('modo-ativo').value;
+            const escalaObj = ESCALAS[escalaNome];
+            const modoObj = (modoNome !== 'Aleatório' && escalaObj) ? escalaObj.modos.find(m => m.nome === modoNome) : null;
+
+            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
+
+            // Leitura dos sliders para pesos
+            const pesoT = parseInt(document.getElementById('peso-tonica').value);
+            const pesoD = parseInt(document.getElementById('peso-dominante').value);
+            const pesoS = parseInt(document.getElementById('peso-subdominante').value);
+            const soma = pesoT + pesoD + pesoS;
+
+            // Define os pesos no objeto gerador (Tonal Fixo/Aleatório)
+            gerador.pesos.contexto_tonal_fixo = {
+                "I": Math.round(pesoT / soma * 100), 
+                "V": Math.round(pesoD / soma * 100),
+                "IV": Math.round(pesoS / soma * 100), 
+                "II": Math.round(pesoS / soma * 100 * 0.1), 
+                "VI": Math.round(pesoT / soma * 100 * 0.1),
+                // Se não for Tonal Fixo, o Gerador.js usará a lógica default no getPesosPorContexto()
+            };
+
+            return {
+                tonalidade: document.getElementById('tonalidade-base').value,
+                contexto: document.getElementById('contexto-gerador').value,
+                escala: escalaNome,
+                modo: modoNome,
+                escala_ativa: modoObj,
+                ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
+                complexidade: complexidadeSelecionada, 
+                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
+            };
         }
 
         function handleSubstituicaoOpcaoClick(index, novaCifra) {
-            aplicarNovaCifra(index, novaCifra);
-            // Oculta todos os dropdowns após a escolha
+            const container = document.querySelector(`.acorde-container[data-index="${index}"] .cifra-principal`);
+            if (container) {
+                 container.textContent = novaCifra;
+                 container.style.backgroundColor = '#ffffcc';
+            }
             document.querySelectorAll('.sub-opcoes-dropdown').forEach(d => d.style.display = 'none');
         }
-
 
         function handleSubstituicaoMainClick(event, acordeIndex, tipoSubstituicao) {
             const acordeOriginal = progressao_ativa.progressao[acordeIndex];
             const opcoesData = acordeOriginal.substituicoes_opcoes.find(o => o.tipo === tipoSubstituicao);
             
-            // Local onde o dropdown será injetado
             let dropdownDiv = document.getElementById(`dropdown-${acordeIndex}`);
             if (!dropdownDiv) {
                 dropdownDiv = document.createElement('div');
@@ -208,13 +258,12 @@
                 event.target.closest('.acorde-container').appendChild(dropdownDiv);
             }
             
-            // Toggle de visibilidade
-            if (dropdownDiv.style.display === 'block') {
-                dropdownDiv.style.display = 'none';
-                return;
-            }
+            // Oculta outros dropdowns
+            document.querySelectorAll('.sub-opcoes-dropdown').forEach(d => d.style.display = 'none');
+
+            // Toggle de visibilidade e renderização
             dropdownDiv.style.display = 'block';
-            dropdownDiv.innerHTML = ''; // Limpa o conteúdo
+            dropdownDiv.innerHTML = '';
             
             if (opcoesData.tipo === 'Relativo') {
                 opcoesData.acoes.forEach(acao => {
@@ -253,15 +302,12 @@
         }
 
         function renderizarResultado(resultado) {
-            // 1. Preencher os Elementos Geradores
             document.getElementById('resumo-contexto').textContent = resultado.contexto_geracao.contexto;
             document.getElementById('resumo-tonalidade').textContent = resultado.contexto_geracao.tonalidade;
             document.getElementById('resumo-escala-modo').textContent = `${resultado.contexto_geracao.escala} (${resultado.contexto_geracao.modo})`;
             
-            // 2. Preencher Cifra Original
             document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
             
-            // 3. Renderizar Botões de Substituição
             const divBotoes = document.getElementById('progressao-com-botoes');
             divBotoes.innerHTML = '';
             
@@ -278,7 +324,6 @@
                     const btn = document.createElement('button');
                     btn.className = 'btn-substituir';
                     btn.textContent = opt.tipo.split(' ')[0];
-                    
                     btn.onclick = (e) => handleSubstituicaoMainClick(e, index, opt.tipo);
                     
                     subArea.appendChild(btn);
@@ -303,46 +348,6 @@
             progressao_ativa = item;
             alert(`Visualizando histórico: ${item.contexto_geracao.tonalidade}`);
         }
-
-        function getConfigAtual() {
-            const escalaNome = document.getElementById('escala-geradora').value;
-            const modoNome = document.getElementById('modo-ativo').value;
-            const escalaObj = ESCALAS[escalaNome];
-            
-            const modoObj = (modoNome !== 'Aleatório' && escalaObj) 
-                ? escalaObj.modos.find(m => m.nome === modoNome) 
-                : null;
-
-            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
-
-            // Leitura dos sliders para pesos
-            const pesoT = parseInt(document.getElementById('peso-tonica').value);
-            const pesoD = parseInt(document.getElementById('peso-dominante').value);
-            const pesoS = parseInt(document.getElementById('peso-subdominante').value);
-            const soma = pesoT + pesoD + pesoS;
-
-            // Atualiza os pesos na configuração do gerador
-            gerador.pesos.contexto_tonal_fixo = {
-                "I": Math.round(pesoT / soma * 100), 
-                "V": Math.round(pesoD / soma * 100),
-                "IV": Math.round(pesoS / soma * 100), 
-                "II": Math.round(pesoS / soma * 100 * 0.1), 
-                "VI": Math.round(pesoT / soma * 100 * 0.1),
-            };
-
-
-            return {
-                tonalidade: document.getElementById('tonalidade-base').value,
-                contexto: document.getElementById('contexto-gerador').value,
-                escala: escalaNome,
-                modo: modoNome,
-                escala_ativa: modoObj,
-                ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                complexidade: complexidadeSelecionada, 
-                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
-            };
-        }
-
 
         function gerarNovaProgressao() {
             try {
