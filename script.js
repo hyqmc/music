@@ -301,7 +301,7 @@ function analyzeProgression(progressionArray, settings) {
 }
 
 // =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS 
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
 // =======================================================
 let currentProgression = []; 
 let currentSettings = {}; 
@@ -600,24 +600,24 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // --- CORREÇÃO DE BUG: PRIORIZAR MENORES/DIMINUTOS ---
+        // --- CORREÇÃO DE BUG REFORÇADA: PRIORIZAR MENORES/DIMINUTOS ---
         
-        // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5, dim)
+        // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5)
         if (baseQuality.includes('sus') || baseQuality === '5') {
             return baseQuality;
         }
 
         // 2. VERIFICA QUALIDADE MENOR/DIMINUTA
+        // Se a qualidade base contiver 'm', '(b5)', ou 'dim', simplifica para o menor ou diminuto correspondente.
         if (baseQuality.includes('m') || baseQuality.includes('(b5)') || baseQuality.includes('dim')) {
              if (baseQuality.includes('dim')) return 'dim'; 
              // Se for m, m7, mMaj7, m7(b5), retorna 'm'.
              return 'm'; 
         }
         
-        // 3. VERIFICA QUALIDADE MAIOR (Garante que só Majors sejam retornados)
-        // A chave aqui é que agora sabemos que o acorde NÃO é menor.
-        if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7')) {
-             return ''; 
+        // 3. QUALQUER OUTRA COISA É CONSIDERADA MAIOR (Maj, Maj7, 7, etc.)
+        if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7') || baseQuality.includes('9') || baseQuality.includes('13')) {
+             return ''; // Retorna tríade maior (vazio)
         }
         
         return baseQuality; 
