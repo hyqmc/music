@@ -4,34 +4,48 @@
     <meta charset="UTF-8">
     <title>Gerador de Progressões Harmônicas</title>
     <style>
+        /* Estilos mantidos para visualização */
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
         h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
-        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top;}
+        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; }
         .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.5em; display: block; margin-bottom: 5px; }
-        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em;}
-        .btn-substituir[data-acao="neg-harm"] { background-color: #ffe0b2; }
-        .neg-harm-opcoes { margin-top: 5px; padding: 5px; border-top: 1px solid #eee; }
-        .historico-item { cursor: pointer; padding: 5px; border-bottom: 1px dotted #ccc; }
+        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
     </style>
 </head>
 <body>
 
+    <script src="data.js"></script>
+    <script src="Gerador.js"></script>
+
     <h1>🎵 Gerador de Progressões Harmônicas</h1>
 
     <div id="config-inputs">
+        <h3>1. Contexto, Tonalidade, Escala e Modo</h3>
         <label>Tonalidade Base:</label>
-        <select id="tonalidade-base">
-            <script>NOTAS.forEach(n => document.write(`<option value="${n}">${n}</option>`));</script>
-        </select>
+        <select id="tonalidade-base"></select>
+        
+        <label>Escala Geradora:</label>
+        <select id="escala-geradora"></select>
+
+        <label>Modo:</label>
+        <select id="modo-ativo"></select>
+        
+        <hr/>
+        
+        <h3>2. Estrutura Rítmica e Complexidade</h3>
         <label>Ritmo (Acordes/Comp.):</label>
         <input type="text" id="ritmo-input" value="1,1,2,1" placeholder="Ex: 1,1,2,1">
+        
         <br><br>
+        
         <button class="btn-acao" onclick="gerarNovaProgressao()">GERAR PROGRESSÃO</button>
+        
+        <hr/>
+        
+        <h3>3. Transposição</h3>
         <button class="btn-acao" onclick="transporProgressaoUI()">TRANSPOR</button>
-        <select id="transpor-para">
-            <script>NOTAS.forEach(n => document.write(`<option value="${n}">${n}</option>`));</script>
-        </select>
+        <select id="transpor-para"></select>
     </div>
 
     <hr/>
@@ -46,118 +60,80 @@
     <div id="progressao-com-botoes">
         </div>
     
-    <hr/>
-
-    <h2>Histórico de Gerações</h2>
-    <button class="btn-acao" onclick="gerador.exportarHistorico()">Exportar Histórico</button>
-    <input type="file" id="importar-historico-input" accept=".json" style="display: none;">
-    <button class="btn-acao" onclick="document.getElementById('importar-historico-input').click()">Importar Histórico</button>
-    <div id="historico-lista"></div>
-
-    <script src="data.js"></script>
-    <script src="Gerador.js"></script>
     <script>
-        // --- INICIALIZAÇÃO E GESTÃO DA UI ---
+        // --- INICIALIZAÇÃO DA UI E LÓGICA DE DADOS ---
         
-        // Objeto de configuração inicial (será atualizado pelos inputs)
-        const configInicial = { tonalidade: 'C', contexto: 'tonal_fixo', ritmica_acordes_por_comp: [1, 1, 1, 1] };
-        const gerador = new GeradorDeProgressao(configInicial);
+        const gerador = new GeradorDeProgressao({});
         let progressao_ativa = null;
 
+        function preencherSelect(id, dados, valor = 'value', texto = 'text') {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+            dados.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valor] || item;
+                option.textContent = item[texto] || item;
+                select.appendChild(option);
+            });
+        }
+        
+        function preencherModos() {
+            const escalaNome = document.getElementById('escala-geradora').value;
+            const escala = ESCALAS[escalaNome];
+            if (escala) {
+                preencherSelect('modo-ativo', escala.modos, 'nome', 'nome');
+            }
+        }
+        
+        // Função de inicialização
+        function inicializarUI() {
+            // 1. Tonalidades e Transposição
+            preencherSelect('tonalidade-base', NOTAS);
+            preencherSelect('transpor-para', NOTAS);
+
+            // 2. Escalas
+            preencherSelect('escala-geradora', Object.keys(ESCALAS));
+            
+            // 3. Modos
+            document.getElementById('escala-geradora').addEventListener('change', preencherModos);
+            preencherModos(); // Preenche inicialmente
+        }
+        
+        // --- GESTÃO DE AÇÕES ---
+
         function getConfigAtual() {
+            const escalaNome = document.getElementById('escala-geradora').value;
+            const modoNome = document.getElementById('modo-ativo').value;
+            const escalaObj = ESCALAS[escalaNome];
+            const modoObj = escalaObj.modos.find(m => m.nome === modoNome);
+
             return {
                 tonalidade: document.getElementById('tonalidade-base').value,
-                contexto: 'tonal_fixo', // Fixo para o teste
+                escala: escalaNome,
+                modo: modoNome,
+                escala_ativa: modoObj, // Passa o objeto do modo para a lógica de cifragem
                 ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                // Outras configs (complexidade, etc.)
+                incluirBaixosAlternativos: true // Fixo para teste
             };
         }
 
         function gerarNovaProgressao() {
-            gerador.config = getConfigAtual();
-            const resultado = gerador.gerarProgressao();
-            progressao_ativa = resultado;
-            renderizarResultado(resultado);
-            renderizarHistorico();
-        }
-
-        function transporProgressaoUI() {
-            if (!progressao_ativa) return alert("Gere uma progressão primeiro.");
-            
-            const nova_tonalidade = document.getElementById('transpor-para').value;
-            const progressao_transposta = gerador.transporProgressao(progressao_ativa.progressao, nova_tonalidade);
-
-            // Atualiza a config e gera o novo objeto de output
-            gerador.config.tonalidade = nova_tonalidade;
-            const novo_resultado = gerador.formatarOutput(progressao_transposta);
-            progressao_ativa = novo_resultado;
-            
-            // Adiciona ao histórico e renderiza
-            gerador.progressoes_historico.push(novo_resultado);
-            renderizarResultado(novo_resultado);
-            renderizarHistorico();
-        }
-
-        function renderizarResultado(resultado) {
-            document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
-            const divBotoes = document.getElementById('progressao-com-botoes');
-            divBotoes.innerHTML = '';
-            
-            resultado.progressao.forEach((acorde, index) => {
-                const acDiv = document.createElement('div');
-                acDiv.className = 'acorde-container';
-                acDiv.setAttribute('data-index', index);
-                acDiv.innerHTML = `<span class="cifra-principal">${acorde.cifra}</span>`;
+            try {
+                // Atualiza a configuração do gerador
+                gerador.config = getConfigAtual();
+                gerador.escala_ativa = gerador.config.escala_ativa; // Define o modo ativo para a classe
                 
-                // Botões de Substituição (Apenas exemplo visual)
-                const subArea = document.createElement('div');
-                subArea.className = 'substituicao-area';
-                acorde.substituicoes_opcoes.forEach(opt => {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn-substituir';
-                    btn.setAttribute('data-acao', opt.tipo);
-                    btn.textContent = opt.tipo === 'Neg. Harm.' ? 'Neg. Harm.' : (opt.tipo === 'Relativo' ? 'Relativo' : (opt.tipo === 'SubV7/V7' ? 'SubV7/V7' : 'AEM'));
-                    btn.onclick = (e) => handleSubstituicaoClick(e, index, opt);
-                    subArea.appendChild(btn);
-                });
-                acDiv.appendChild(subArea);
-                divBotoes.appendChild(acDiv);
-            });
-        }
-        
-        function renderizarHistorico() {
-            const lista = document.getElementById('historico-lista');
-            lista.innerHTML = gerador.progressoes_historico.map((item, index) => 
-                `<div class="historico-item" onclick="visualizarHistorico(${index})">
-                    [${index + 1}] ${item.contexto_geracao.tonalidade} | ${item.progressoes_historico.progressao_cifrada_formatada.trim().substring(0, 50)}... (${item.timestamp})
-                </div>`).join('');
-        }
-
-        function visualizarHistorico(index) {
-            const item = gerador.progressoes_historico[index];
-            renderizarResultado(item);
-            progressao_ativa = item;
-            alert(`Visualizando histórico: ${item.contexto_geracao.tonalidade}`);
-        }
-
-        // --- HANDLERS DE AÇÃO ---
-
-        function handleSubstituicaoClick(event, index, opt) {
-            const acorde = progressao_ativa.progressao[index];
-            let novaCifra = acorde.cifra;
-
-            if (opt.tipo === 'Neg. Harm.') {
-                const tonalidade_index = gerador.notas.indexOf(gerador.config.tonalidade);
+                const resultado = gerador.gerarProgressao();
+                progressao_ativa = resultado;
                 
-                // Escolha do Eixo Tônico (Exemplo: 3.5 semitons + Tônica)
-                const eixo_tonico_valor = opt.eixos[0].eixo_valor; 
-                novaCifra = gerador.aplicarHarmoniaNegativa(acorde, eixo_tonico_valor);
-                alert(`Harmonia Negativa (Eixo Tônico) aplicada: ${novaCifra}`);
-            } 
-            // Implementar outras substituições (Relativo, SubV7/V7, AEM) aqui...
-
-            // Atualiza a UI
-            event.target.closest('.acorde-container').querySelector('.cifra-principal').textContent = novaCifra;
+                document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
+                // renderizarResultado(resultado); // Chamar função para botões de substituição
+                alert("Progressão Gerada com Sucesso! (Verifique a área cifrada)");
+                
+            } catch (e) {
+                console.error("Erro na geração:", e);
+                document.getElementById('cifragem-texto').textContent = `ERRO: Não foi possível gerar a progressão. Verifique o console. Detalhe: ${e.message}`;
+            }
         }
 
         function copiarCifragem() {
@@ -167,17 +143,8 @@
             });
         }
         
-        // Listener para Importação
-        document.getElementById('importar-historico-input').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                gerador.importarHistorico(e.target.files[0]);
-                e.target.value = null; // Limpa o input file
-            }
-        });
-
-        // Inicializa a UI com a primeira nota
-        document.getElementById('tonalidade-base').value = 'C';
-
+        // Chamada de inicialização
+        window.onload = inicializarUI;
     </script>
 </body>
 </html>
