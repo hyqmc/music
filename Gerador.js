@@ -1,4 +1,5 @@
 // Gerador.js
+// Depende do arquivo data.js
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -6,6 +7,7 @@ class GeradorDeProgressao {
         this.pesos = pesos;
         this.progressoes_historico = [];
         this.notas = NOTAS;
+        // Assume escala e modo iniciais com base na config, para demonstração:
         this.escala_ativa = ESCALAS["Diatônica (Maior)"].modos[0];
         this.mapa_tonal_ativo = {};
     }
@@ -79,6 +81,7 @@ class GeradorDeProgressao {
     }
 
     aplicarBaixoAlternativo(cifra_base, raiz_acorde_cifra) {
+        // CORRIGIDO: Acesso direto à raiz.
         if (this.config.incluirBaixosAlternativos && Math.random() < 0.2) {
             const graus_inversao_semitons = [4, 7]; 
             
@@ -108,6 +111,7 @@ class GeradorDeProgressao {
 
         let cifra_final = raiz_cifra + sufixo + tensoes;
         
+        // Chamada corrigida para baixo alternativo
         cifra_final = this.aplicarBaixoAlternativo(cifra_final, raiz_cifra); 
 
         return {
@@ -149,9 +153,11 @@ class GeradorDeProgressao {
             substituicoes.push({ tipo: "SubV7/V7" }); 
         }
 
-        const tonalidade_index = this.notas.indexOf(this.config.tonalidade);
+        // CORRIGIDO: Variável 'tonalidade_index' corretamente definida localmente.
+        const tonalidade_index = this.notas.indexOf(this.config.tonalidade); 
+        
         const eixo_tonico_index = (tonalidade_index + 3.5); 
-        const eixo_dominante_index = (tonidade_index + 11);
+        const eixo_dominante_index = (tonalidade_index + 11);
         
         substituicoes.push({ 
             tipo: "Neg. Harm.",
@@ -196,15 +202,11 @@ class GeradorDeProgressao {
             }
         }
 
-        // [MÓDULO CORRIGIDO: FORMATAR OUTPUT]
         const output = this.formatarOutput(progressao_objetos);
         this.progressoes_historico.push(output);
         return output;
     }
 
-    /**
-     * @description [ADICIONADO] Função que formata o objeto da progressão para a string cifrada final.
-     */
     formatarOutput(progressao_objetos) {
         let cifra_formatada = "";
         let compasso_atual = 0;
@@ -226,9 +228,6 @@ class GeradorDeProgressao {
         };
     }
 
-    /**
-     * @description [ADICIONADO] Função de transposição, essencial para o botão na UI.
-     */
     transporProgressao(progressao_original, nova_tonalidade) {
         const tonalidade_original = this.config.tonalidade;
         const diferenca_semitons = (this.notas.indexOf(nova_tonalidade) - this.notas.indexOf(tonalidade_original) + 12) % 12;
@@ -249,5 +248,30 @@ class GeradorDeProgressao {
         return progressao_transposta;
     }
     
-    // As funções exportarHistorico e importarHistorico (já definidas em etapas anteriores) também devem estar presentes.
+    // As funções exportarHistorico e importarHistorico (simplificadas)
+    exportarHistorico() {
+        const json_string = JSON.stringify(this.progressoes_historico, null, 2);
+        const blob = new Blob([json_string], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'historico_progressao_harmonica.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    importarHistorico(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                this.progressoes_historico = JSON.parse(e.target.result);
+                console.log("Histórico de progressões importado com sucesso.");
+            } catch (error) {
+                console.error("Erro ao importar histórico:", error);
+                alert("Falha ao carregar o arquivo. Certifique-se de que é um JSON válido.");
+            }
+        };
+        reader.readAsText(file);
+    }
 }
