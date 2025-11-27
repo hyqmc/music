@@ -22,11 +22,35 @@ const ESCALAS = {
             { "nome": "Lídio", "estrutura": [0, 2, 4, 6, 7, 9, 11], "qualidade_I": "maj" },
             { "nome": "Mixolídio", "estrutura": [0, 2, 4, 5, 7, 9, 10], "qualidade_I": "dom" },
             { "nome": "Eólio", "estrutura": [0, 2, 3, 5, 7, 8, 10], "qualidade_I": "m" },
-            // Simplificado, incluir outras escalas (Menor Harmônica, Bebop, etc.)
+        ]
+    },
+    "Maior Harmônica": {
+        "estrutura": [0, 2, 4, 5, 7, 8, 11],
+        "modos": [
+            { "nome": "Jônio b6 (H. Maior)", "estrutura": [0, 2, 4, 5, 7, 8, 11], "qualidade_I": "maj" },
+            { "nome": "Dórico #4", "estrutura": [0, 2, 3, 6, 7, 9, 10], "qualidade_I": "m" },
+        ]
+    },
+    "Diminuta (T/ST)": {
+        "estrutura": [0, 2, 3, 5, 6, 8, 9, 11],
+        "modos": [
+            { "nome": "Diminuta (T/ST)", "estrutura": [0, 2, 3, 5, 6, 8, 9, 11], "qualidade_I": "dim" },
+        ]
+    },
+    "Tons Inteiros": {
+        "estrutura": [0, 2, 4, 6, 8, 10],
+        "modos": [
+            { "nome": "Tons Inteiros", "estrutura": [0, 2, 4, 6, 8, 10], "qualidade_I": "aug" },
         ]
     }
-    // Incluir outras escalas (Bebop, Diminutas, etc.) aqui
 };
+
+const CONTEXTOS_GERADORES = [
+    { value: "tonal_fixo", text: "1) Tonal Fixo (Funcional Clássica)" },
+    { value: "tonal_aleatorio", text: "2) Tonal Aleatório (Jazzístico/Empréstimos)" },
+    { value: "modal_pura", text: "3) Música Modal Pura" },
+    { value: "completamente_aleatorio", text: "4) Completamente Aleatório" }
+];
 
 const PESOS_PADRAO = {
     "contexto_tonal_fixo": { "I": 35, "V": 30, "IV": 25, "II": 5, "VI": 5 },
@@ -40,5 +64,4 @@ const ESTRUTURA_INTERV_RELATIVA = {
     "Lídio": "1, 2, 3, #4, 5, 6, 7",
     "Mixolídio": "1, 2, 3, 4, 5, 6, b7",
     "Eólio": "1, 2, b3, 4, 5, b6, b7",
-    // ...
 };
