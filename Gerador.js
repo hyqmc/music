@@ -1,5 +1,4 @@
 // Gerador.js
-// Depende do arquivo data.js
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -80,7 +79,6 @@ class GeradorDeProgressao {
     }
 
     aplicarBaixoAlternativo(cifra_base, raiz_acorde_cifra) {
-        // [CORREÇÃO APLICADA AQUI] Acesso direto à raiz.
         if (this.config.incluirBaixosAlternativos && Math.random() < 0.2) {
             const graus_inversao_semitons = [4, 7]; 
             
@@ -110,7 +108,6 @@ class GeradorDeProgressao {
 
         let cifra_final = raiz_cifra + sufixo + tensoes;
         
-        // Aplica o baixo alternativo (Chamada corrigida)
         cifra_final = this.aplicarBaixoAlternativo(cifra_final, raiz_cifra); 
 
         return {
@@ -123,7 +120,7 @@ class GeradorDeProgressao {
         };
     }
 
-    // --- Funções de Substituição Complexa (Essenciais para evitar o erro) ---
+    // --- Funções de Substituição Complexa ---
 
     aplicarHarmoniaNegativa(acorde_objeto, eixo_semitom_total) {
         const raiz_index = this.notas.indexOf(acorde_objeto.raiz);
@@ -136,7 +133,6 @@ class GeradorDeProgressao {
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
     
-    // [CORREÇÃO APLICADA AQUI] Adicionando a função completa que faltou e causou o erro inicial
     gerarSugestoesDeSubstituicao(acorde_objeto) {
         const substituicoes = [];
         const funcao_original = acorde_objeto.funcao_tipo;
@@ -155,7 +151,7 @@ class GeradorDeProgressao {
 
         const tonalidade_index = this.notas.indexOf(this.config.tonalidade);
         const eixo_tonico_index = (tonalidade_index + 3.5); 
-        const eixo_dominante_index = (tonalidade_index + 11);
+        const eixo_dominante_index = (tonidade_index + 11);
         
         substituicoes.push({ 
             tipo: "Neg. Harm.",
@@ -169,7 +165,7 @@ class GeradorDeProgressao {
         return substituicoes;
     }
 
-    // --- Funções Principais (Gerar/Formatar/Transpor) ---
+    // --- Função Principal e Output ---
 
     gerarProgressao() {
         const tonalidade_base = this.config.tonalidade || "C";
@@ -200,12 +196,58 @@ class GeradorDeProgressao {
             }
         }
 
+        // [MÓDULO CORRIGIDO: FORMATAR OUTPUT]
         const output = this.formatarOutput(progressao_objetos);
         this.progressoes_historico.push(output);
         return output;
     }
 
-    // ... (transporProgressao, formatarOutput, exportarHistorico, importarHistorico)
-    // Essas funções estão completas nas etapas anteriores, mas estão omitidas aqui por brevidade.
-    // Presume-se que você as incluiu na versão final do seu Gerador.js.
+    /**
+     * @description [ADICIONADO] Função que formata o objeto da progressão para a string cifrada final.
+     */
+    formatarOutput(progressao_objetos) {
+        let cifra_formatada = "";
+        let compasso_atual = 0;
+
+        progressao_objetos.forEach(acorde => {
+            if (acorde.compasso > compasso_atual) {
+                cifra_formatada += (compasso_atual > 0 ? " \n" : "") + "| ";
+                compasso_atual = acorde.compasso;
+            }
+            cifra_formatada += `${acorde.cifra} `;
+        });
+        cifra_formatada += "|";
+        
+        return {
+            contexto_geracao: this.config,
+            progressao: progressao_objetos,
+            progressao_cifrada_formatada: cifra_formatada,
+            timestamp: new Date().toLocaleString()
+        };
     }
+
+    /**
+     * @description [ADICIONADO] Função de transposição, essencial para o botão na UI.
+     */
+    transporProgressao(progressao_original, nova_tonalidade) {
+        const tonalidade_original = this.config.tonalidade;
+        const diferenca_semitons = (this.notas.indexOf(nova_tonalidade) - this.notas.indexOf(tonalidade_original) + 12) % 12;
+
+        this.gerarMapaDiatonico(this.notas.indexOf(nova_tonalidade), this.escala_ativa.estrutura); 
+        
+        const progressao_transposta = progressao_original.map(acorde_original => {
+            let cifra = acorde_original.cifra;
+            const raiz_original_index = this.notas.indexOf(acorde_original.raiz);
+            const nova_raiz_index = (raiz_original_index + diferenca_semitons) % 12;
+            const nova_raiz_cifra = this.cifrarNota(nova_raiz_index);
+            
+            const nova_cifra_completa = nova_raiz_cifra + cifra.substring(acorde_original.raiz.length); 
+
+            return { ...acorde_original, cifra: nova_cifra_completa, raiz: nova_raiz_cifra };
+        });
+
+        return progressao_transposta;
+    }
+    
+    // As funções exportarHistorico e importarHistorico (já definidas em etapas anteriores) também devem estar presentes.
+}
