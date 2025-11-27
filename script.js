@@ -301,7 +301,7 @@ function analyzeProgression(progressionArray, settings) {
 }
 
 // =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS 
 // =======================================================
 let currentProgression = []; 
 let currentSettings = {}; 
@@ -375,6 +375,7 @@ function updateModeSelect(selectedScaleKey) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ESTABILIZAÇÃO: Chama as funções de povoamento
     populateRootSelect();
     populateScaleSelect(); 
     
@@ -502,7 +503,7 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade (Mantida a lógica de base) ---
+// --- Módulo 2B: Determinação da Qualidade (Corrigido o bug menor) ---
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
@@ -599,7 +600,7 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // --- CORREÇÃO CRÍTICA: PRIORIZAR A VERIFICAÇÃO DE ACORDES MENORES (M7, M9, M7(B5), Mmaj7) ---
+        // --- CORREÇÃO DE BUG (Priorizar acordes menores) ---
         
         // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5, dim)
         if (baseQuality.includes('sus') || baseQuality === '5') {
@@ -618,7 +619,7 @@ function determineQuality(root, context, settings) {
              return ''; 
         }
         
-        return baseQuality; // Fallback
+        return baseQuality; 
     }
     
     if (sortedLevel === 'Extensao') {
@@ -984,7 +985,8 @@ function updateResults(progressionArray) {
         
         if (otherScales.length > 0) {
              improOutput += `  > OUTRAS OPÇÕES:\n`;
-             otherOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
+             otherScales.forEach(scale => {
+                 improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
              });
         }
         improOutput += '\n'; 
