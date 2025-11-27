@@ -253,7 +253,25 @@ class GeradorDeProgressao {
         return substituicoes;
     }
 
-    // --- FUNÇÕES PRINCIPAIS (COMPLETAS) ---
+    // --- FUNÇÕES PRINCIPAIS ---
+
+    getPesosPorContexto() {
+        const contexto = this.config.contexto;
+        
+        if (contexto === 'tonal_fixo' || contexto === 'tonal_aleatorio') {
+            return this.pesos.contexto_tonal_fixo;
+        } 
+        
+        if (contexto === 'modal_pura') {
+            return { "I": 60, "IV": 15, "V": 15, "II": 5, "VI": 5 };
+        } 
+        
+        if (contexto === 'completamente_aleatorio') {
+            return { "I": 15, "II": 15, "III": 15, "IV": 15, "V": 15, "VI": 15, "VII": 10 };
+        }
+
+        return this.pesos.contexto_tonal_fixo;
+    }
 
     gerarProgressao() {
         // Lógica para tratar entradas "Aleatório"
@@ -283,13 +301,17 @@ class GeradorDeProgressao {
         this.escala_ativa = modo_obj; 
         this.gerarMapaDiatonico(tonalidade_index, this.escala_ativa.estrutura);
 
+        // Seleciona os pesos ativos para a geração
+        const pesos_ativos = this.getPesosPorContexto(); 
+        
         const total_acordes = this.config.ritmica_acordes_por_comp.reduce((a, b) => a + b, 0);
         let progressao_objetos = [];
         let compasso_atual = 1;
         let acorde_no_compasso = 0;
 
         for (let i = 0; i < total_acordes; i++) {
-            const funcao = this.escolherComPeso(FUNCOES_HARMONICAS, this.pesos.contexto_tonal_fixo);
+            // Usa os pesos ativos
+            const funcao = this.escolherComPeso(FUNCOES_HARMONICAS, pesos_ativos); 
             const acorde_obj = this.harmonizarAcorde(funcao, tonalidade_index);
             
             acorde_obj.compasso = compasso_atual;
