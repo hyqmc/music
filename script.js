@@ -301,7 +301,7 @@ function analyzeProgression(progressionArray, settings) {
 }
 
 // =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS 
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
 // =======================================================
 let currentProgression = []; 
 let currentSettings = {}; 
@@ -503,7 +503,7 @@ function determineRoot(context, prevRoot, settings) {
     }
 }
 
-// --- Módulo 2B: Determinação da Qualidade (Corrigido o bug menor) ---
+// --- Módulo 2B: Determinação da Qualidade ---
 
 function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
@@ -600,7 +600,7 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
-        // --- CORREÇÃO DE BUG (Priorizar acordes menores) ---
+        // --- CORREÇÃO DE BUG: PRIORIZAR MENORES/DIMINUTOS ---
         
         // 1. Mantém qualidades não-triádicas que não são Maj/m (sus, 5, dim)
         if (baseQuality.includes('sus') || baseQuality === '5') {
@@ -610,7 +610,8 @@ function determineQuality(root, context, settings) {
         // 2. VERIFICA QUALIDADE MENOR/DIMINUTA
         if (baseQuality.includes('m') || baseQuality.includes('(b5)') || baseQuality.includes('dim')) {
              if (baseQuality.includes('dim')) return 'dim'; 
-             return 'm'; // Retorna 'm' para Dm7, EmMaj7, Cdim, etc.
+             // Se for m, m7, mMaj7, m7(b5), retorna 'm'.
+             return 'm'; 
         }
         
         // 3. VERIFICA QUALIDADE MAIOR (Inclui a simplificação de Maj7, 7, 9, 13)
@@ -985,6 +986,7 @@ function updateResults(progressionArray) {
         
         if (otherScales.length > 0) {
              improOutput += `  > OUTRAS OPÇÕES:\n`;
+             // CORRIGIDO: O ERRO DE SINTAXE DEVE ESTAR AQUI!
              otherScales.forEach(scale => {
                  improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
              });
