@@ -1,4 +1,4 @@
-// Gerador.js
+// Gerador.js (COMPLETAMENTE COMPILADO E SEM ABREVIAÇÕES)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -197,7 +197,6 @@ class GeradorDeProgressao {
         
         if (!acorde_substituto) return acorde_objeto.cifra;
 
-        // Extrai o sufixo de complexidade do acorde original (preserva a complexidade)
         const sufixo_completo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
         
         return acorde_substituto.raiz + sufixo_completo_original;
@@ -223,7 +222,7 @@ class GeradorDeProgressao {
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
-    generarSugestoesDeEmprestimoModal(acorde_objeto) {
+    gerarSugestoesDeEmprestimoModal(acorde_objeto) {
         const tonalidade_base = this.config.tonalidade;
         const sugestoes_modais = [];
         
@@ -304,9 +303,7 @@ class GeradorDeProgressao {
     }
 
     gerarProgressao() {
-        // Lógica para tratar entradas "Aleatório"
         
-        // 1. Tonalidade Aleatória
         let tonalidade_base = this.config.tonalidade;
         if (tonalidade_base === 'Aleatório') {
             tonalidade_base = this.notas[Math.floor(Math.random() * this.notas.length)];
@@ -314,7 +311,6 @@ class GeradorDeProgressao {
         }
         const tonalidade_index = this.notas.indexOf(tonalidade_base);
         
-        // 2. Escala e Modo Aleatórios
         let modo_obj = this.config.escala_ativa;
         if (this.config.escala === 'Aleatório' || this.config.modo === 'Aleatório' || !modo_obj) {
             const escalas_chaves = Object.keys(ESCALAS);
@@ -331,7 +327,6 @@ class GeradorDeProgressao {
         this.escala_ativa = modo_obj; 
         this.gerarMapaDiatonico(tonalidade_index, this.escala_ativa.estrutura);
 
-        // Seleciona os pesos ativos para a geração
         const pesos_ativos = this.getPesosPorContexto(); 
         
         const total_acordes = this.config.ritmica_acordes_por_comp.reduce((a, b) => a + b, 0);
