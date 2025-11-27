@@ -2,142 +2,182 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Progressões de Acordes Avançado V2</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Gerador de Progressões Harmônicas</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
+        .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
+        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top;}
+        .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.5em; display: block; margin-bottom: 5px; }
+        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em;}
+        .btn-substituir[data-acao="neg-harm"] { background-color: #ffe0b2; }
+        .neg-harm-opcoes { margin-top: 5px; padding: 5px; border-top: 1px solid #eee; }
+        .historico-item { cursor: pointer; padding: 5px; border-bottom: 1px dotted #ccc; }
+    </style>
 </head>
 <body>
 
-    <header>
-        <h1>🎶 Gerador de Progressões de Acordes (Jazz/Modal) V2</h1>
-        <p>Defina as regras harmônicas para gerar sua progressão musicalmente coerente.</p>
-    </header>
+    <h1>🎵 Gerador de Progressões Harmônicas</h1>
 
-    <main>
-        <div class="controls-container">
-            <section class="control-group" id="context-settings">
-                <h2>1. Contexto e Tonalidade</h2>
-                
-                <div class="input-group">
-                    <label for="tonality-context">Escolha o Contexto Harmônico:</label>
-                    <select id="tonality-context">
-                        <option value="tonal-fixo">Tonal Fixo (Funcional Clássica)</option>
-                        <option value="tonal-jazz">Tonal Aleatório (Jazzística/Substituições)</option>
-                        <option value="modal-pura">Progressão Modal Pura</option>
-                        <option value="atonal">Atonal (Completamente Aleatória)</option>
-                    </select>
-                </div>
+    <div id="config-inputs">
+        <label>Tonalidade Base:</label>
+        <select id="tonalidade-base">
+            <script>NOTAS.forEach(n => document.write(`<option value="${n}">${n}</option>`));</script>
+        </select>
+        <label>Ritmo (Acordes/Comp.):</label>
+        <input type="text" id="ritmo-input" value="1,1,2,1" placeholder="Ex: 1,1,2,1">
+        <br><br>
+        <button class="btn-acao" onclick="gerarNovaProgressao()">GERAR PROGRESSÃO</button>
+        <button class="btn-acao" onclick="transporProgressaoUI()">TRANSPOR</button>
+        <select id="transpor-para">
+            <script>NOTAS.forEach(n => document.write(`<option value="${n}">${n}</option>`));</script>
+        </select>
+    </div>
 
-                <div id="tonal-selects">
-                    <div class="input-group">
-                        <label for="root-note">Tonalidade Base (Raiz):</label>
-                        <select id="root-note">
-                            </select>
-                    </div>
-                    
-                    <div class="input-group" id="scale-type-select">
-                        <label for="scale-type">Escala Base:</label>
-                        <select id="scale-type">
-                            </select>
-                    </div>
+    <hr/>
 
-                    <div class="input-group" id="modal-mode-select">
-                        <label for="modal-mode">Modo Específico:</label>
-                        <select id="modal-mode">
-                            </select>
-                    </div>
-                </div>
-                
-                <div class="input-group" id="user-notes-input" style="display: none;">
-                    <label>Notas para Geração (Separadas por vírgula):</label>
-                    <input type="text" id="custom-notes" placeholder="Ex: C, D, E, F, G, A, B">
-                </div>
+    <h2>Resultado Cifrado (Original)</h2>
+    <pre id="cifragem-texto" class="cifragem-progressao">Clique em GERAR PROGRESSÃO para começar.</pre>
+    <button class="btn-acao" onclick="copiarCifragem()">COPIAR CIFRAGEM</button>
 
-            </section>
+    <hr/>
 
-            <section class="control-group" id="complexity-settings">
-                <h2>2. Complexidade dos Acordes</h2>
-                <div class="input-group checkbox-group">
-                    <label>Tipos de Acordes Permitidos:</label><br>
-                    <input type="checkbox" id="c-triads" value="Triade" checked> <label for="c-triads">Tríades</label>
-                    <input type="checkbox" id="c-sevenths" value="Setima" checked> <label for="c-sevenths">Sétimas</label>
-                    <input type="checkbox" id="c-extensions" value="Extensao"> <label for="c-extensions">Extensões (9/11/13)</label>
-                    <input type="checkbox" id="c-suspended" value="Suspenso"> <label for="c-suspended">Suspensos</label>
-                    <input type="checkbox" id="c-diminished" value="Diminuto"> <label for="c-diminished">Diminutos</label>
-                    <input type="checkbox" id="c-augmented" value="Aumentado"> <label for="c-augmented">Aumentados</label>
-                    <input type="checkbox" id="c-power" value="Power"> <label for="c-power">Power Chords (5)</label>
-                </div>
-                <div class="input-group" id="verticality-select" style="display: none;">
-                    <label>Tipo de Verticalidade (Modal):</label>
-                    <select id="modal-verticality">
-                        <option value="tercas">Terças (Padrão)</option>
-                        <option value="quartal">Quartal (4ªs)</option>
-                        <option value="quintal">Quintal (5ªs)</option>
-                    </select>
-                </div>
-            </section>
-
-            <section class="control-group" id="rhythm-settings">
-                <h2>3. Estrutura Rítmica e Coloração</h2>
-                <div class="input-group">
-                    <label for="num-measures">Número Total de Compassos:</label>
-                    <input type="number" id="num-measures" value="4" min="1">
-                </div>
-                <div class="input-group">
-                    <label for="chords-per-measure">Acordes por Compasso (Ex: 1, 2, 2, 1):</label>
-                    <input type="text" id="chords-per-measure" value="1, 1, 1, 1">
-                </div>
-                <div class="input-group checkbox-group">
-                    <input type="checkbox" id="c-bass" value="BaixoAlternativo"> <label for="c-bass">Incluir Baixo Alternativo ( / )</label>
-                    <input type="checkbox" id="c-tensions" value="TensoesAlteradas"> <label for="c-tensions">Incluir Tensões Alteradas</label>
-                </div>
-            </section>
+    <h2>Progressão com Substituições Interativas</h2>
+    <div id="progressao-com-botoes">
         </div>
+    
+    <hr/>
 
-        <button id="generate-button">GERAR PROGRESSÃO</button>
+    <h2>Histórico de Gerações</h2>
+    <button class="btn-acao" onclick="gerador.exportarHistorico()">Exportar Histórico</button>
+    <input type="file" id="importar-historico-input" accept=".json" style="display: none;">
+    <button class="btn-acao" onclick="document.getElementById('importar-historico-input').click()">Importar Histórico</button>
+    <div id="historico-lista"></div>
 
-        <section class="results-container" id="results" style="display: none;">
-            <h2>Resultado</h2>
+    <script src="data.js"></script>
+    <script src="Gerador.js"></script>
+    <script>
+        // --- INICIALIZAÇÃO E GESTÃO DA UI ---
+        
+        // Objeto de configuração inicial (será atualizado pelos inputs)
+        const configInicial = { tonalidade: 'C', contexto: 'tonal_fixo', ritmica_acordes_por_comp: [1, 1, 1, 1] };
+        const gerador = new GeradorDeProgressao(configInicial);
+        let progressao_ativa = null;
 
-            <div class="result-box result-main-output" style="flex: 1 1 100%;">
+        function getConfigAtual() {
+            return {
+                tonalidade: document.getElementById('tonalidade-base').value,
+                contexto: 'tonal_fixo', // Fixo para o teste
+                ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
+                // Outras configs (complexidade, etc.)
+            };
+        }
+
+        function gerarNovaProgressao() {
+            gerador.config = getConfigAtual();
+            const resultado = gerador.gerarProgressao();
+            progressao_ativa = resultado;
+            renderizarResultado(resultado);
+            renderizarHistorico();
+        }
+
+        function transporProgressaoUI() {
+            if (!progressao_ativa) return alert("Gere uma progressão primeiro.");
+            
+            const nova_tonalidade = document.getElementById('transpor-para').value;
+            const progressao_transposta = gerador.transporProgressao(progressao_ativa.progressao, nova_tonalidade);
+
+            // Atualiza a config e gera o novo objeto de output
+            gerador.config.tonalidade = nova_tonalidade;
+            const novo_resultado = gerador.formatarOutput(progressao_transposta);
+            progressao_ativa = novo_resultado;
+            
+            // Adiciona ao histórico e renderiza
+            gerador.progressoes_historico.push(novo_resultado);
+            renderizarResultado(novo_resultado);
+            renderizarHistorico();
+        }
+
+        function renderizarResultado(resultado) {
+            document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
+            const divBotoes = document.getElementById('progressao-com-botoes');
+            divBotoes.innerHTML = '';
+            
+            resultado.progressao.forEach((acorde, index) => {
+                const acDiv = document.createElement('div');
+                acDiv.className = 'acorde-container';
+                acDiv.setAttribute('data-index', index);
+                acDiv.innerHTML = `<span class="cifra-principal">${acorde.cifra}</span>`;
                 
-                <h3>Progressão Cifrada (Visual)</h3>
-                <pre id="visual-progression" class="progression-display"></pre>
+                // Botões de Substituição (Apenas exemplo visual)
+                const subArea = document.createElement('div');
+                subArea.className = 'substituicao-area';
+                acorde.substituicoes_opcoes.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-substituir';
+                    btn.setAttribute('data-acao', opt.tipo);
+                    btn.textContent = opt.tipo === 'Neg. Harm.' ? 'Neg. Harm.' : (opt.tipo === 'Relativo' ? 'Relativo' : (opt.tipo === 'SubV7/V7' ? 'SubV7/V7' : 'AEM'));
+                    btn.onclick = (e) => handleSubstituicaoClick(e, index, opt);
+                    subArea.appendChild(btn);
+                });
+                acDiv.appendChild(subArea);
+                divBotoes.appendChild(acDiv);
+            });
+        }
+        
+        function renderizarHistorico() {
+            const lista = document.getElementById('historico-lista');
+            lista.innerHTML = gerador.progressoes_historico.map((item, index) => 
+                `<div class="historico-item" onclick="visualizarHistorico(${index})">
+                    [${index + 1}] ${item.contexto_geracao.tonalidade} | ${item.progressoes_historico.progressao_cifrada_formatada.trim().substring(0, 50)}... (${item.timestamp})
+                </div>`).join('');
+        }
+
+        function visualizarHistorico(index) {
+            const item = gerador.progressoes_historico[index];
+            renderizarResultado(item);
+            progressao_ativa = item;
+            alert(`Visualizando histórico: ${item.contexto_geracao.tonalidade}`);
+        }
+
+        // --- HANDLERS DE AÇÃO ---
+
+        function handleSubstituicaoClick(event, index, opt) {
+            const acorde = progressao_ativa.progressao[index];
+            let novaCifra = acorde.cifra;
+
+            if (opt.tipo === 'Neg. Harm.') {
+                const tonalidade_index = gerador.notas.indexOf(gerador.config.tonalidade);
                 
-                <div class="analysis-visual-group">
-                    <h4 id="out-scale-name">Escala Geradora: </h4>
-                    
-                    <div class="generator-summary">
-                        <p>Contexto: <span id="out-context"></span></p>
-                        <p>Tonalidade Base: <span id="out-root"></span></p>
-                        <p>Modo: <span id="out-mode"></span></p>
-                        <p id="out-verticality-p" style="display: none;">Verticalidade: <span id="out-verticality"></span></p>
-                    </div>
-                </div>
-                
-                <div class="impro-suggestions-block">
-                    <h3>Sugestões de Escalas por Acorde</h3>
-                    <pre id="impro-suggestions" class="progression-copy-text"></pre>
-                </div>
-            </div>
+                // Escolha do Eixo Tônico (Exemplo: 3.5 semitons + Tônica)
+                const eixo_tonico_valor = opt.eixos[0].eixo_valor; 
+                novaCifra = gerador.aplicarHarmoniaNegativa(acorde, eixo_tonico_valor);
+                alert(`Harmonia Negativa (Eixo Tônico) aplicada: ${novaCifra}`);
+            } 
+            // Implementar outras substituições (Relativo, SubV7/V7, AEM) aqui...
 
-            <div class="result-box result-transpose">
-                <h3>Transposição</h3>
-                <div class="input-group inline-group">
-                    <label for="transpose-value">Transpor em Semitons:</label>
-                    <input type="number" id="transpose-value" value="0" min="-12" max="12">
-                    <button id="apply-transpose">Aplicar Transposição</button>
-                </div>
-            </div>
+            // Atualiza a UI
+            event.target.closest('.acorde-container').querySelector('.cifra-principal').textContent = novaCifra;
+        }
 
-            <div class="result-box result-copy-output">
-                <h3>Progressão para Cópia</h3>
-                <pre id="chord-progression" class="progression-copy-text"></pre>
-                <button id="copy-button">Copiar Tudo</button>
-            </div>
-        </section>
-    </main>
+        function copiarCifragem() {
+            const texto = document.getElementById('cifragem-texto').textContent;
+            navigator.clipboard.writeText(texto).then(() => {
+                alert("Cifragem copiada com sucesso!");
+            });
+        }
+        
+        // Listener para Importação
+        document.getElementById('importar-historico-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                gerador.importarHistorico(e.target.files[0]);
+                e.target.value = null; // Limpa o input file
+            }
+        });
 
-    <script src="script.js"></script>
+        // Inicializa a UI com a primeira nota
+        document.getElementById('tonalidade-base').value = 'C';
+
+    </script>
 </body>
 </html>
