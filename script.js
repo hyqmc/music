@@ -6,6 +6,12 @@ const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
+// Mapeamento de equivalências para padronização enharmônica (Correção de F# / Ab)
+const ENHARMONIC_MAP = {
+    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
+    'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
+};
+
 const MODE_NAMES = {
     'major': 'Jônio (Maior)', 'dorian': 'Dórico', 'phrygian': 'Frígio', 'lydian': 'Lídio',
     'mixolydian': 'Mixolídio', 'aeolian': 'Eólio (Menor Natural)', 'locrian': 'Lócrio',
@@ -39,8 +45,8 @@ const QUALITIES = {
     'Extensao': ['Maj9', 'm9', '9', 'Maj13', 'm13', '13', 'm11'],
     'Suspenso': ['sus2', 'sus4', '7sus4'], 
     'Diminuto': ['dim7', 'm7(b5)'],
-    'Aumentado': ['Aug', 'Maj7(#5)'], // NOVO
-    'Power': ['5'], // NOVO
+    'Aumentado': ['Aug', 'Maj7(#5)'], 
+    'Power': ['5'], 
 };
 const ALTERED_TENSIONS = ['b9', '#9', '#11', 'b13', '#5'];
 const FUNCTION_MAP = { 'I': 'T', 'VI': 'T', 'III': 'T', 'II': 'SD', 'IV': 'SD', 'V': 'D', 'VII': 'D' };
@@ -78,6 +84,25 @@ function getNoteFromDegree(baseRoot, intervalIndex, modeKey = 'major') {
     const intervalSemitones = modeIntervals[intervalIndex]; 
     const noteIndex = (baseRootIndex + intervalSemitones) % NOTES.length;
     return NOTES[noteIndex];
+}
+
+/**
+ * Garante que a notação do acorde (raiz e baixo) seja consistente (só # ou só b).
+ * @param {string} note - Nota gerada (Ex: 'Ab' ou 'C#').
+ * @param {string} accidentalsType - 'sharp' ou 'flat' (baseado na Tonalidade Raiz).
+ * @returns {string} A nota com a grafia padronizada.
+ */
+function standardizeAccidentals(note, accidentalsType) {
+    const isSharp = note.includes('#');
+    const isFlat = note.includes('b');
+
+    if (accidentalsType === 'sharp' && isFlat) {
+        return ENHARMONIC_MAP[note] || note;
+    }
+    if (accidentalsType === 'flat' && isSharp) {
+        return ENHARMONIC_MAP[note] || note;
+    }
+    return note;
 }
 
 
@@ -295,7 +320,7 @@ function determineQuality(root, context, settings) {
 
     const sortedLevel = getRandomElement(complexityPool);
 
-    // --- Lógica para os novos tipos que independem da qualidade diatônica ---
+    // Lógica para os novos tipos que independem da qualidade diatônica
     if (sortedLevel === 'Power') {
         return '5'; 
     }
@@ -303,7 +328,7 @@ function determineQuality(root, context, settings) {
         return getRandomElement(QUALITIES['Aumentado']);
     }
     
-    // --- Lógica Diatônica (para Triade, Setima, Extensao, Suspenso, Diminuto) ---
+    // --- Lógica Diatônica ---
 
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
@@ -317,6 +342,8 @@ function determineQuality(root, context, settings) {
     }
 
     if (sortedLevel === 'Triade') {
+        // CORREÇÃO: Remove 'Maj' para tríades maiores (Ex: C em vez de CMaj)
+        if (baseQuality === 'Maj') return ''; 
         if (baseQuality.includes('Maj7') || baseQuality === 'Maj') return 'Maj';
         if (baseQuality.includes('m7') || baseQuality === 'm') return 'm';
         if (baseQuality.includes('(b5)')) return 'dim'; 
@@ -363,7 +390,6 @@ function applyColoring(root, quality, context, settings) {
     let tensions = '';
     let bass = '';
 
-    // Power Chords não devem ter extensões/tensões
     if (quality === '5') {
         return { tensions: '', bass: '' };
     }
@@ -444,6 +470,9 @@ function generateProgression() {
         return;
     }
 
+    // Determina o tipo de acidente para a padronização: 'sharp' se a raiz tiver #, 'flat' se tiver b
+    let accidentalsType = baseRoot.includes('b') ? 'flat' : 'sharp';
+
     const progression = [];
     let prevRoot = null; 
 
@@ -452,11 +481,19 @@ function generateProgression() {
         let measure = '';
 
         for (let j = 0; j < numChords; j++) {
-            const root = determineRoot(context, prevRoot, currentSettings); 
+            let root = determineRoot(context, prevRoot, currentSettings); 
             let quality = determineQuality(root, context, currentSettings);
             const coloring = applyColoring(root, quality, context, currentSettings);
             let bass = coloring.bass; 
             let tensions = coloring.tensions; 
+            
+            // Padroniza a raiz e o baixo antes de construir a cifra
+            root = standardizeAccidentals(root, accidentalsType);
+            if (bass.includes('/')) {
+                const bassNote = bass.split('/')[1];
+                bass = '/' + standardizeAccidentals(bassNote, accidentalsType);
+            }
+
 
             if (quality.includes('Quartal') || quality.includes('Quintal')) {
                  quality = `^${quality}`; 
@@ -610,6 +647,10 @@ function updateResults(progressionArray) {
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
     document.getElementById('visual-progression').innerText = formattedProgression;
     
+    // Notificação sobre o teclado removido
+    document.getElementById('keyboard-removed-notice').textContent = 'Visualização do teclado removida por solicitação.';
+
+
     // 3. Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
     document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
