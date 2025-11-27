@@ -171,22 +171,58 @@ class GeradorDeProgressao {
             sugestoes_escala: { contextual: { nome: `${raiz_cifra} ${this.config.modo}`, estrutura: ESTRUTURA_INTERV_RELATIVA[this.config.modo.split(' ')[0]] || "Estrutura Padrão" } }
         };
     }
+
+    // --- FUNÇÕES DE SUBSTITUIÇÃO ---
     
-    aplicarHarmoniaNegativa(acorde_objeto, eixo_semitom_total) {
+    substituirPorRelativo(acorde_objeto, grau_alvo) {
+        const tonalidade_index = this.notas.indexOf(this.config.tonalidade);
+        const grau_alvo_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
+        
+        if (!grau_alvo_obj) return acorde_objeto.cifra;
+        
+        const raiz_index_absoluto = (tonalidade_index + grau_alvo_obj.semitons) % 12;
+        const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
+        
+        const sufixo = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
+        
+        return raiz_cifra + sufixo;
+    }
+
+    substituirPorTritono(acorde_objeto) {
+        const raiz_original_index = this.notas.indexOf(acorde_objeto.raiz);
+        const subV_index = (raiz_original_index + 6) % 12;
+        const subV_cifra = this.cifrarNota(subV_index);
+        
+        return `${subV_cifra}7(b9, #11)`;
+    }
+
+    calcularHarmoniaNegativa(acorde_objeto, eixo_valor) {
         const raiz_index = this.notas.indexOf(acorde_objeto.raiz);
-        const neg_raiz_index = (2 * eixo_semitom_total - raiz_index);
+        const neg_raiz_index = (2 * eixo_valor - raiz_index);
         const neg_raiz_index_ajustado = Math.round((neg_raiz_index % 12 + 12) % 12);
         const neg_raiz_cifra = this.cifrarNota(neg_raiz_index_ajustado);
 
         let neg_sufixo = acorde_objeto.cifra.includes("m") ? "maj7" : "m7";
+        if (acorde_objeto.cifra.includes("7")) neg_sufixo = "m7";
         
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
+    gerarSugestoesDeEmprestimoModal(acorde_objeto) {
+        const raiz = acorde_objeto.raiz;
+        return [
+            { modo: 'Dórico', cifra: `${raiz}m7` },
+            { modo: 'Frígio', cifra: `${raiz}m7(b9)` },
+            { modo: 'M. Harmônica', cifra: `${raiz}maj7(#5)` }
+        ];
+    }
+    
     gerarSugestoesDeSubstituicao(acorde_objeto) {
         const substituicoes = [];
         const funcao_original = acorde_objeto.funcao_tipo;
+        const tonalidade_index = this.notas.indexOf(this.config.tonalidade); 
         
+        // Relativos
         if (funcao_original === "Tônica") {
             substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "III", label: "III (Mediante)" }, { grau: "VI", label: "VI (Relativo Menor)" }] });
         } else if (funcao_original === "Subdominante") {
@@ -195,28 +231,29 @@ class GeradorDeProgressao {
              substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "VII", label: "VII (Sensível)" }, { grau: "V", label: "V (Dominante)" }] });
         }
 
+        // SubV7/V7
         if (acorde_objeto.cifra.includes("7") && !acorde_objeto.cifra.includes("maj")) { 
-            substituicoes.push({ tipo: "SubV7/V7" }); 
+            substituicoes.push({ tipo: "Trítono", acoes: [{ label: "SubV7", cifra_calc: this.substituirPorTritono(acorde_objeto) }] }); 
         }
 
-        const tonalidade_index = this.notas.indexOf(this.config.tonalidade); 
-        
+        // Harmonia Negativa
         const eixo_tonico_index = (tonalidade_index + 3.5); 
         const eixo_dominante_index = (tonalidade_index + 11);
         
         substituicoes.push({ 
             tipo: "Neg. Harm.",
             eixos: [
-                { nome: "Eixo Tônico", eixo_valor: eixo_tonico_index },
-                { nome: "Eixo Dominante", eixo_valor: eixo_dominante_index }
+                { nome: "Eixo Tônico", eixo_valor: eixo_tonico_index, cifra_calc: this.calcularHarmoniaNegativa(acorde_objeto, eixo_tonico_index) },
+                { nome: "Eixo Dominante", eixo_valor: eixo_dominante_index, cifra_calc: this.calcularHarmoniaNegativa(acorde_objeto, eixo_dominante_index) }
             ]
         });
 
-        substituicoes.push({ tipo: "AEM" });
+        // AEM
+        substituicoes.push({ tipo: "AEM", sugestoes: this.gerarSugestoesDeEmprestimoModal(acorde_objeto) });
         return substituicoes;
     }
 
-    // --- FUNÇÕES PRINCIPAIS (INCLUINDO AS FALTANTES) ---
+    // --- FUNÇÕES PRINCIPAIS (COMPLETAS) ---
 
     gerarProgressao() {
         // Lógica para tratar entradas "Aleatório"
@@ -272,9 +309,6 @@ class GeradorDeProgressao {
         return output;
     }
 
-    /**
-     * @description [INCLUÍDA] Formata o objeto da progressão para a string cifrada final.
-     */
     formatarOutput(progressao_objetos) {
         let cifra_formatada = "";
         let compasso_atual = 0;
@@ -296,9 +330,6 @@ class GeradorDeProgressao {
         };
     }
 
-    /**
-     * @description [INCLUÍDA] Transpõe a progressão para uma nova tonalidade.
-     */
     transporProgressao(progressao_original, nova_tonalidade) {
         const tonalidade_original = this.config.tonalidade;
         const diferenca_semitons = (this.notas.indexOf(nova_tonalidade) - this.notas.indexOf(tonalidade_original) + 12) % 12;
@@ -311,7 +342,6 @@ class GeradorDeProgressao {
             const nova_raiz_index = (raiz_original_index + diferenca_semitons) % 12;
             const nova_raiz_cifra = this.cifrarNota(nova_raiz_index);
             
-            // Tenta manter o sufixo, assumindo que está correto para a nova raiz
             const nova_cifra_completa = nova_raiz_cifra + cifra.substring(acorde_original.raiz.length); 
 
             return { ...acorde_original, cifra: nova_cifra_completa, raiz: nova_raiz_cifra };
@@ -320,9 +350,6 @@ class GeradorDeProgressao {
         return progressao_transposta;
     }
     
-    /**
-     * @description [INCLUÍDA] Exporta o histórico como arquivo JSON.
-     */
     exportarHistorico() {
         const json_string = JSON.stringify(this.progressoes_historico, null, 2);
         const blob = new Blob([json_string], { type: 'application/json' });
@@ -335,9 +362,6 @@ class GeradorDeProgressao {
         document.body.removeChild(a);
     }
 
-    /**
-     * @description [INCLUÍDA] Importa o histórico a partir de um arquivo JSON.
-     */
     importarHistorico(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
