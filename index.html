@@ -9,6 +9,12 @@
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
         .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
         #complexidade-opcoes label { margin-right: 15px; display: inline-block; }
+        #dados-geracao { background-color: #f0f8ff; padding: 10px; border: 1px dashed #0056b3; margin-bottom: 20px; }
+        #pesos-sliders label { display: inline-block; width: 150px; text-align: right; margin-right: 10px; }
+        #historico-lista { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+        .historico-item { padding: 5px; border-bottom: 1px dotted #ccc; cursor: pointer; font-size: 0.9em; }
+        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; text-align: center; }
+        .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.2em; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -48,7 +54,8 @@
             <label><input type="checkbox" name="complexidade_option" value="aumentado"> Aumentados (+)</label>
             <label><input type="checkbox" name="complexidade_option" value="diminuto"> Diminutos (dim)</label>
             <label><input type="checkbox" name="complexidade_option" value="powerchord"> Powerchords (5)</label>
-            <label><input type="checkbox" name="complexidade_option" value="quartal"> Quartais/Quintais</label>
+            <label><input type="checkbox" name="complexidade_option" value="quartal"> Quartais</label>
+            <label><input type="checkbox" name="complexidade_option" value="quintal"> Quintais</label>
             <label><input type="checkbox" name="complexidade_option" value="slash_chords"> Baixos Alternativos (/)</label>
         </div>
 
@@ -59,12 +66,44 @@
         <br><br>
         
         <button class="btn-acao" onclick="gerarNovaProgressao()">GERAR PROGRESSÃO</button>
-        
+
         <hr/>
         
-        <h3>3. Transposição</h3>
+        <h3>4. Pesos e Probabilidades (Tonal Fixo)</h3>
+        <div id="pesos-sliders">
+            <label>Tônica (I, III, VI):</label>
+            <input type="range" id="peso-tonica" min="10" max="80" value="45"> <span id="val-tonica">45%</span><br>
+            
+            <label>Dominante (V, VII):</label>
+            <input type="range" id="peso-dominante" min="10" max="80" value="35"> <span id="val-dominante">35%</span><br>
+            
+            <label>Subdominante (II, IV):</label>
+            <input type="range" id="peso-subdominante" min="10" max="80" value="20"> <span id="val-subdominante">20%</span><br>
+        </div>
+        
+        <hr/>
+
+        <h3>5. Transposição e Histórico</h3>
         <button class="btn-acao" onclick="transporProgressaoUI()">TRANSPOR</button>
         <select id="transpor-para"></select>
+        
+        <br><br>
+
+        <button class="btn-acao" onclick="gerador.exportarHistorico()">Exportar Histórico</button>
+        <input type="file" id="importar-historico-input" accept=".json" style="display: none;">
+        <button class="btn-acao" onclick="document.getElementById('importar-historico-input').click()">Importar Histórico</button>
+
+        <div id="historico-lista"></div>
+
+    </div>
+
+    <hr/>
+
+    <h2>✨ Elementos Geradores</h2>
+    <div id="dados-geracao">
+        <p>Contexto: <strong id="resumo-contexto">N/A</strong></p>
+        <p>Tonalidade Base: <strong id="resumo-tonalidade">N/A</strong></p>
+        <p>Escala Ativa: <strong id="resumo-escala-modo">N/A</strong></p>
     </div>
 
     <hr/>
@@ -105,12 +144,12 @@
             const escalaNome = document.getElementById('escala-geradora').value;
             const escala = ESCALAS[escalaNome];
             if (escala) {
-                preencherSelect('modo-ativo', escala.modos, 'nome', 'nome', true); // Adiciona Aleatório
+                preencherSelect('modo-ativo', escala.modos, 'nome', 'nome', true);
             }
         }
         
         function inicializarUI() {
-            // Adiciona "Aleatório" como padrão
+            // Preenchimento de listas
             preencherSelect('tonalidade-base', NOTAS, 'value', 'text', true);
             preencherSelect('transpor-para', NOTAS, 'value', 'text', true);
 
@@ -118,6 +157,23 @@
             document.getElementById('escala-geradora').addEventListener('change', preencherModos);
             preencherModos();
             preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text', true);
+            
+            // Listener para atualizar o valor do slider na tela
+            document.addEventListener('input', function (e) {
+                if (e.target.type === 'range') {
+                    const idPart = e.target.id.split('-')[1];
+                    document.getElementById('val-' + idPart).textContent = e.target.value + '%';
+                }
+            });
+            
+            // Listener para Importação
+            document.getElementById('importar-historico-input').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    gerador.importarHistorico(e.target.files[0]);
+                    e.target.value = null; 
+                    renderizarHistorico(); 
+                }
+            });
         }
         
         // --- GESTÃO DE AÇÕES ---
@@ -127,23 +183,93 @@
             const modoNome = document.getElementById('modo-ativo').value;
             const escalaObj = ESCALAS[escalaNome];
             
-            // Verifica se o modo ativo não é 'Aleatório' e o encontra
             const modoObj = (modoNome !== 'Aleatório' && escalaObj) 
                 ? escalaObj.modos.find(m => m.nome === modoNome) 
-                : null; // Se for Aleatório, o Gerador.js lida
+                : null;
 
             const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
+
+            // Leitura dos sliders para pesos
+            const pesoT = parseInt(document.getElementById('peso-tonica').value);
+            const pesoD = parseInt(document.getElementById('peso-dominante').value);
+            const pesoS = parseInt(document.getElementById('peso-subdominante').value);
+            const soma = pesoT + pesoD + pesoS;
+
+            // Atualiza os pesos na configuração do gerador (CORREÇÃO DE PESOS)
+            gerador.pesos.contexto_tonal_fixo = {
+                "I": Math.round(pesoT / soma * 100), // Tônica
+                "V": Math.round(pesoD / soma * 100), // Dominante
+                "IV": Math.round(pesoS / soma * 100), // Subdominante
+                // Distribuir o restante (II, III, VI, VII) proporcionalmente ao peso base
+                "II": Math.round(pesoS / soma * 100 * 0.1), 
+                "VI": Math.round(pesoT / soma * 100 * 0.1),
+            };
+
 
             return {
                 tonalidade: document.getElementById('tonalidade-base').value,
                 contexto: document.getElementById('contexto-gerador').value,
                 escala: escalaNome,
                 modo: modoNome,
-                escala_ativa: modoObj, // Pode ser null se for Aleatório
+                escala_ativa: modoObj,
                 ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
                 complexidade: complexidadeSelecionada, 
                 incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords')
             };
+        }
+
+        function renderizarResultado(resultado) {
+            // 1. Preencher os Elementos Geradores
+            document.getElementById('resumo-contexto').textContent = resultado.contexto_geracao.contexto;
+            document.getElementById('resumo-tonalidade').textContent = resultado.contexto_geracao.tonalidade;
+            document.getElementById('resumo-escala-modo').textContent = `${resultado.contexto_geracao.escala} (${resultado.contexto_geracao.modo})`;
+            
+            // 2. Preencher Cifra Original
+            document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
+            
+            // 3. Renderizar Botões de Substituição (Implementação Interativa)
+            const divBotoes = document.getElementById('progressao-com-botoes');
+            divBotoes.innerHTML = '';
+            
+            resultado.progressao.forEach((acorde, index) => {
+                const acDiv = document.createElement('div');
+                acDiv.className = 'acorde-container';
+                acDiv.setAttribute('data-index', index);
+                acDiv.innerHTML = `<span class="cifra-principal">${acorde.cifra}</span>`;
+                
+                const subArea = document.createElement('div');
+                subArea.className = 'substituicao-area';
+                
+                acorde.substituicoes_opcoes.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-substituir';
+                    btn.setAttribute('data-acao', opt.tipo.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    btn.textContent = opt.tipo.split(' ')[0];
+                    
+                    // Exemplo de handler:
+                    btn.onclick = (e) => alert(`Opções para ${opt.tipo} em ${acorde.cifra}. (Lógica completa a ser implementada!)`);
+                    
+                    subArea.appendChild(btn);
+                });
+
+                acDiv.appendChild(subArea);
+                divBotoes.appendChild(acDiv);
+            });
+        }
+        
+        function renderizarHistorico() {
+            const lista = document.getElementById('historico-lista');
+            lista.innerHTML = gerador.progressoes_historico.map((item, index) => 
+                `<div class="historico-item" onclick="visualizarHistorico(${index})">
+                    [${index + 1}] ${item.contexto_geracao.tonalidade} - ${item.progressao_cifrada_formatada.trim().substring(0, 50)}... (${item.timestamp})
+                </div>`).join('');
+        }
+
+        function visualizarHistorico(index) {
+            const item = gerador.progressoes_historico[index];
+            renderizarResultado(item);
+            progressao_ativa = item;
+            alert(`Visualizando histórico: ${item.contexto_geracao.tonalidade}`);
         }
 
         function gerarNovaProgressao() {
@@ -153,15 +279,15 @@
                 const resultado = gerador.gerarProgressao();
                 progressao_ativa = resultado;
                 
-                document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
-                alert("Progressão Gerada com Sucesso!");
+                renderizarResultado(resultado);
+                renderizarHistorico();
                 
             } catch (e) {
                 console.error("Erro na geração:", e);
                 document.getElementById('cifragem-texto').textContent = `ERRO: Não foi possível gerar a progressão. Verifique o console. Detalhe: ${e.message}`;
             }
         }
-        
+
         function transporProgressaoUI() {
             const nova_tonalidade = document.getElementById('transpor-para').value;
             if (!progressao_ativa || !progressao_ativa.progressao) return alert("Gere uma progressão primeiro.");
@@ -172,8 +298,8 @@
             const novo_resultado = gerador.formatarOutput(progressao_transposta);
             progressao_ativa = novo_resultado;
             
-            document.getElementById('cifragem-texto').textContent = novo_resultado.progressao_cifrada_formatada;
-            alert(`Progressão transposta para ${nova_tonalidade}`);
+            renderizarResultado(novo_resultado);
+            renderizarHistorico();
         }
 
         function copiarCifragem() {
