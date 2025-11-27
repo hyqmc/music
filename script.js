@@ -429,7 +429,6 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     // Ajustes finais
     if (quality.includes('sus')) {
         if (quality.includes('7')) return '7sus4';
-        // Se sus e sem 5ª (comum em pentatônicas), retorna 5
         if (fifth === -1) return '5'; 
         return 'sus'; 
     }
@@ -755,6 +754,9 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
 
+/**
+ * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
+ */
 function createUnifiedOutput(progressionArray, settings) {
     const { context, rootNote, modeKey, verticality, scaleType } = settings;
     
@@ -791,6 +793,7 @@ function createUnifiedOutput(progressionArray, settings) {
 
 function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
+    // CORREÇÃO: Garante que o container de resultados seja visível
     resultsDiv.style.display = 'flex';
 
     const baseRoot = currentSettings.rootNote;
@@ -798,12 +801,12 @@ function updateResults(progressionArray) {
     const verticality = currentSettings.verticality;
 
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
+    // Atualiza a Progressão Visível (Bloco 1)
     document.getElementById('visual-progression').innerText = formattedProgression;
     
-    // ATENÇÃO: A remoção do aviso de teclado foi aplicada aqui.
-
     // Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
+    // Atualiza Escala Sugerida
     document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
     document.getElementById('out-root').innerText = baseRoot; 
@@ -820,5 +823,6 @@ function updateResults(progressionArray) {
     }
 
     const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
+    // Atualiza Progressão para Cópia (Bloco 3)
     document.getElementById('chord-progression').innerText = unifiedOutput;
 }
