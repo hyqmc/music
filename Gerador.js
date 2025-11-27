@@ -1,5 +1,4 @@
 // Gerador.js
-// Depende do arquivo data.js
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -60,7 +59,7 @@ class GeradorDeProgressao {
         return Array.isArray(nome_alternativo) ? nome_alternativo[0] : nome_alternativo;
     }
 
-    // --- LÓGICA DE COMPLEXIDADE E CIFRAGEM ---
+    // --- LÓGICA DE COMPLEXIDADE E HARMONIZAÇÃO ---
 
     getComplexidadeAtiva() {
         const tipos_marcados = this.config.complexidade;
@@ -173,19 +172,35 @@ class GeradorDeProgressao {
     }
 
     // --- FUNÇÕES DE SUBSTITUIÇÃO ---
-    
-    substituirPorRelativo(acorde_objeto, grau_alvo) {
-        const tonalidade_index = this.notas.indexOf(this.config.tonalidade);
-        const grau_alvo_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
+
+    localizarAcordePorGrau(grau_alvo, tonalidade_base) {
+        const funcao_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
+        if (!funcao_obj) return null;
         
-        if (!grau_alvo_obj) return acorde_objeto.cifra;
-        
-        const raiz_index_absoluto = (tonalidade_index + grau_alvo_obj.semitons) % 12;
+        const tonalidade_index = this.notas.indexOf(tonalidade_base);
+        const raiz_index_absoluto = (tonalidade_index + funcao_obj.semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
-        const sufixo = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
+        let sufixo_base = funcao_obj.qualidade === 'dom' ? '7' : (funcao_obj.qualidade === 'm' ? 'm' : 'maj');
+        if (funcao_obj.qualidade === 'm7(b5)') sufixo_base = 'm7(b5)';
+
+        return {
+            cifra: raiz_cifra + sufixo_base, 
+            raiz: raiz_cifra,
+            semitons: funcao_obj.semitons
+        };
+    }
+
+    substituirPorRelativo(acorde_objeto, grau_alvo) {
+        const tonalidade_base = this.config.tonalidade;
+        const acorde_substituto = this.localizarAcordePorGrau(grau_alvo, tonalidade_base);
         
-        return raiz_cifra + sufixo;
+        if (!acorde_substituto) return acorde_objeto.cifra;
+
+        // Extrai o sufixo de complexidade do acorde original (preserva a complexidade)
+        const sufixo_completo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
+        
+        return acorde_substituto.raiz + sufixo_completo_original;
     }
 
     substituirPorTritono(acorde_objeto) {
@@ -208,13 +223,28 @@ class GeradorDeProgressao {
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
-    gerarSugestoesDeEmprestimoModal(acorde_objeto) {
-        const raiz = acorde_objeto.raiz;
-        return [
-            { modo: 'Dórico', cifra: `${raiz}m7` },
-            { modo: 'Frígio', cifra: `${raiz}m7(b9)` },
-            { modo: 'M. Harmônica', cifra: `${raiz}maj7(#5)` }
-        ];
+    generarSugestoesDeEmprestimoModal(acorde_objeto) {
+        const tonalidade_base = this.config.tonalidade;
+        const sugestoes_modais = [];
+        
+        for (const escala_chave in ESCALAS) {
+            const escala_obj = ESCALAS[escala_chave];
+            const modo_paralelo = escala_obj.modos[0];
+            
+            const raiz_cifra = this.cifrarNota(this.notas.indexOf(tonalidade_base));
+            
+            let cifra_sugerida = raiz_cifra + modo_paralelo.qualidade_I;
+            if (cifra_sugerida.includes("maj")) cifra_sugerida += "7"; 
+            if (cifra_sugerida.includes("m")) cifra_sugerida += "7";
+
+            if (escala_chave !== this.config.escala && modo_paralelo.qualidade_I !== 'maj') {
+                 sugestoes_modais.push({
+                    modo: modo_paralelo.nome,
+                    cifra: cifra_sugerida
+                 });
+            }
+        }
+        return sugestoes_modais.slice(0, 5);
     }
     
     gerarSugestoesDeSubstituicao(acorde_objeto) {
@@ -310,7 +340,6 @@ class GeradorDeProgressao {
         let acorde_no_compasso = 0;
 
         for (let i = 0; i < total_acordes; i++) {
-            // Usa os pesos ativos
             const funcao = this.escolherComPeso(FUNCOES_HARMONICAS, pesos_ativos); 
             const acorde_obj = this.harmonizarAcorde(funcao, tonalidade_index);
             
