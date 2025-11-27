@@ -1,12 +1,12 @@
 // =======================================================
-// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL (FINAL)
+// MÓDULO DE DADOS: CONSTANTES DE TEORIA MUSICAL
 // =======================================================
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const BASE_NOTE_MAP = ['C', 'D', 'E', 'F', 'G', 'A', 'B']; 
 const BLACK_KEYS_CHROMA = [1, 3, 6, 8, 10]; 
 
-// NOVO: Estrutura aninhada expandida para SCALES_DATA
+// Estrutura aninhada expandida para SCALES_DATA (Mantida como a mais recente)
 const SCALES_DATA = {
     // --- ESCALAS DIATÔNICAS E DERIVADAS DE 7 NOTAS ---
     'major_diatonic': {
@@ -92,7 +92,8 @@ const SCALES_DATA = {
     }
 };
 
-// Mapeamento de equivalências para padronização enharmônica
+// ... (Outras constantes mantidas) ...
+
 const ENHARMONIC_MAP = {
     'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
     'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
@@ -117,9 +118,163 @@ const FUNCTIONAL_RULES = {
 
 
 // =======================================================
-// FUNÇÕES AUXILIARES GLOBAIS
+// FUNÇÕES AUXILIARES E LÓGICA DE IMPROVISO (NOVO)
 // =======================================================
 
+// Função para obter os intervalos essenciais e completos de um acorde
+function getChordIntervals(quality) {
+    // Simplificação de qualidades estendidas para a fundamental (7ª/3ª/5ª)
+    if (quality.includes('Maj7') || quality.includes('Maj9') || quality.includes('Maj13')) {
+        return { essential: [0, 4, 7], full: [0, 4, 7, 11] }; // R, M3, P5, M7
+    }
+    if (quality.includes('mMaj7')) {
+        return { essential: [0, 3, 7], full: [0, 3, 7, 11] }; // R, m3, P5, M7
+    }
+    if (quality.includes('m7') || quality.includes('m9') || quality.includes('m11') || quality.includes('m13')) {
+        return { essential: [0, 3, 7], full: [0, 3, 7, 10] }; // R, m3, P5, m7
+    }
+    if (quality.includes('7') || quality.includes('9') || quality.includes('13')) {
+        return { essential: [0, 4, 7], full: [0, 4, 7, 10] }; // R, M3, P5, m7
+    }
+    if (quality.includes('m7(b5)')) {
+        return { essential: [0, 3, 6], full: [0, 3, 6, 10] }; // R, m3, d5, m7
+    }
+    if (quality.includes('dim7')) {
+        return { essential: [0, 3, 6], full: [0, 3, 6, 9] }; // R, m3, d5, d7
+    }
+    if (quality.includes('Aug') || quality.includes('(#5)')) {
+        return { essential: [0, 4, 8], full: [0, 4, 8, 11] }; // R, M3, #5, (M7)
+    }
+    if (quality.includes('sus')) {
+        return { essential: [0, 7], full: [0, 5, 7, 10] }; // R, P5, (P4)
+    }
+    if (quality === 'Maj' || quality === '') {
+        return { essential: [0, 4, 7], full: [0, 4, 7] }; // R, M3, P5
+    }
+    if (quality === 'm') {
+        return { essential: [0, 3, 7], full: [0, 3, 7] }; // R, m3, P5
+    }
+    return { essential: [0, 4, 7], full: [0, 4, 7] }; 
+}
+
+// Função central para sugerir escalas compatíveis
+function getSuggestedImproScales(fullChord, baseModeKey, baseRoot) {
+    const chordMatch = fullChord.match(/([A-G][#b]?)([A-Za-z0-9()#b]*)/);
+    if (!chordMatch) return [];
+
+    const chordRoot = chordMatch[1];
+    const rawQuality = chordMatch[2].replace(/[()]/g, '').split('/')[0]; // Remove tensões e baixo alternativo
+    
+    // Lógica para Tríades, que são mais ambíguas em termos de 7ª
+    let analyzedQuality = rawQuality;
+    if (analyzedQuality === 'Maj' || analyzedQuality === '') analyzedQuality = 'Maj7';
+    if (analyzedQuality === 'm') analyzedQuality = 'm7';
+    
+    // Simplificação de acordes Quartal/Quintal
+    if (rawQuality.includes('Quartal') || rawQuality.includes('Quintal')) {
+        return [{ 
+            name: getModeName(baseModeKey), 
+            note: baseRoot, 
+            contextual: true, 
+            color: 'Siga o Modo Gerador', 
+            modeKey: baseModeKey 
+        }];
+    }
+
+    const targetIntervals = getChordIntervals(analyzedQuality).full;
+    const rootIndex = NOTES.indexOf(chordRoot);
+    const compatibleScales = [];
+
+    for (const scaleType in SCALES_DATA) {
+        for (const mode of SCALES_DATA[scaleType].modes) {
+            const modeIntervals = mode.intervals;
+            let isCompatible = true;
+            let tensionText = [];
+
+            // 1. Checa a compatibilidade com os tons essenciais (R, 3, 5, 7)
+            for (const interval of targetIntervals) {
+                const requiredChromaticIndex = (rootIndex + interval) % 12;
+                
+                // Transpõe a escala para a tônica do acorde (chordRoot)
+                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
+
+                if (!modeTones.includes(requiredChromaticIndex)) {
+                    isCompatible = false;
+                    break;
+                }
+            }
+            
+            // 2. Coleta as tensões (9ª, 11ª, 13ª e Alteradas)
+            if (isCompatible) {
+                const modeTones = modeIntervals.map(i => (rootIndex + i) % 12);
+                const tensions = [2, 5, 9]; // 9, 11, 13
+                
+                // Mapeamento de intervalo semitom para nome de tensão
+                const tensionMap = { 1: 'b9', 2: '9', 3: '#9', 5: '11', 6: '#11', 8: 'b13', 9: '13' };
+                
+                for (let i = 1; i <= 11; i++) { // Checa todos os 12 semitons
+                    if (!targetIntervals.includes(i)) {
+                        const requiredChromaticIndex = (rootIndex + i) % 12;
+                        if (modeTones.includes(requiredChromaticIndex)) {
+                            // Calcula o intervalo da tensão em relação ao root
+                            let tensionInterval = (requiredChromaticIndex - rootIndex + 12) % 12;
+                            if (tensionMap[tensionInterval]) {
+                                tensionText.push(tensionMap[tensionInterval]);
+                            }
+                        }
+                    }
+                }
+                
+                let color = tensionText.length > 0 ? `T: ${tensionText.join(', ')}` : 'Padrão Diatônico';
+                let contextual = false;
+                
+                // Identifica as High-Priority/Contextual Scales
+                if (analyzedQuality.includes('Maj') && (mode.key === 'major' || mode.key === 'lydian')) { contextual = true; }
+                else if (analyzedQuality.includes('m') && (mode.key === 'dorian' || mode.key === 'aeolian')) { contextual = true; }
+                else if (analyzedQuality.includes('7') && (mode.key === 'mixolydian' || mode.key === 'lydian_flat7' || mode.key === 'superlocrian')) { contextual = true; }
+                else if (analyzedQuality.includes('m7(b5)') && (mode.key === 'locrian' || mode.key === 'locrian_sharp2')) { contextual = true; }
+
+                compatibleScales.push({
+                    name: mode.name,
+                    note: chordRoot,
+                    color: color,
+                    contextual: contextual 
+                });
+            }
+        }
+    }
+    
+    // Ordena: contextual primeiro, depois por nome
+    compatibleScales.sort((a, b) => {
+        if (a.contextual !== b.contextual) {
+            return b.contextual - a.contextual; 
+        }
+        return a.name.localeCompare(b.name);
+    });
+
+    return compatibleScales;
+}
+
+/**
+ * Analisa a progressão gerada para sugerir escalas de improviso para cada acorde.
+ */
+function analyzeProgression(progressionArray, settings) {
+    const allChords = progressionArray.flatMap(measure => measure.split(/\s+/).filter(c => c.length > 0));
+    const uniqueChords = [...new Set(allChords)];
+    
+    const analysis = {};
+    
+    uniqueChords.forEach(chord => {
+        analysis[chord] = getSuggestedImproScales(chord, settings.modeKey, settings.rootNote);
+    });
+    
+    return analysis;
+}
+
+// =======================================================
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
+// =======================================================
+// ... (populateSelect, populateRootSelect, populateScaleSelect, updateModeSelect, document.addEventListener) ...
 function weightedRandomSelection(rules) {
     const totalWeight = rules.reduce((sum, rule) => sum + rule.chance, 0);
     let randomNum = Math.random() * totalWeight; 
@@ -176,14 +331,6 @@ function standardizeAccidentals(note, accidentalsType) {
     return note;
 }
 
-
-// =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS
-// =======================================================
-
-let currentProgression = []; 
-let currentSettings = {}; 
-
 function populateSelect(selectId, optionsMap) {
     const select = document.getElementById(selectId);
     select.innerHTML = '';
@@ -234,7 +381,6 @@ function updateModeSelect(selectedScaleKey) {
     randomOption.textContent = 'Aleatório';
     modeSelect.appendChild(randomOption);
 
-    // CORREÇÃO: Se a escala for "Aleatório", o modo também deve ser forçado a "Aleatório"
     if (selectedScaleKey === 'Aleatorio') {
         return;
     }
@@ -304,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 // MÓDULO PRINCIPAL DE GERAÇÃO (Módulo 2)
 // =======================================================
+// ... (determineRootAtonal, determineRootModal, determineRootFunctional, determineRootJazz, determineRoot) ...
 
 function determineRootAtonal() {
     return getRandomElement(NOTES);
@@ -387,7 +534,6 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     const modeIntervals = getModeIntervals(modeKey); 
 
     const getChromaticInterval = (degreeIndex) => {
-        // Intervalos do 1º, 3º, 5º, 7º (a partir da raiz do modo = 0)
         const targetDegreeIntervals = [0, 2, 4, 5, 7, 9, 11]; 
         const targetSemitone = targetDegreeIntervals[degreeIndex * 2]; 
         
@@ -412,21 +558,17 @@ function constructDiatonicQuality(modeKey, rootIntervalIndex) {
     
     let quality = '';
 
-    // 1. Determinação da Terça (Maior/Menor/Sus)
     if (third === 3) { quality = 'm'; } 
     else if (third === 4) { quality = 'Maj'; } 
     else if (third === -1 || third !== 3 && third !== 4) { quality = 'sus'; } 
 
-    // 2. Determinação da Quinta (Perfeita/Aumentada/Diminuta)
     if (fifth === 6) { quality += '(b5)'; } 
     else if (fifth === 8) { quality += '(#5)'; } 
     
-    // 3. Determinação da Sétima (Maj7/7/Dim)
     if (seventh === 10) { quality += '7'; } 
     else if (seventh === 11) { quality += 'Maj7'; } 
     else if (seventh === 9) { quality += 'dim7'; } 
     
-    // Ajustes finais
     if (quality.includes('sus')) {
         if (quality.includes('7')) return '7sus4';
         if (fifth === -1) return '5'; 
@@ -462,8 +604,6 @@ function determineQuality(root, context, settings) {
         return getRandomElement(QUALITIES['Aumentado']);
     }
     
-    // --- Lógica Diatônica/Modal ---
-
     const rootIndex = NOTES.indexOf(root);
     const baseRootIndex = NOTES.indexOf(baseRoot);
     const semitonesFromRoot = (rootIndex - baseRootIndex + 12) % 12;
@@ -754,10 +894,7 @@ function getSuggestedScale(baseRoot, modeKey, context, customNotes) {
     return `${scaleName} (${baseRoot}): ${notes}`;
 }
 
-/**
- * Cria o bloco de texto unificado para cópia (Cifra + Geradores).
- */
-function createUnifiedOutput(progressionArray, settings) {
+function createUnifiedOutput(progressionArray, settings, analysis) {
     const { context, rootNote, modeKey, verticality, scaleType } = settings;
     
     const formattedProgression = progressionArray.map(measure => `| ${measure} `).join('') + '|';
@@ -765,11 +902,11 @@ function createUnifiedOutput(progressionArray, settings) {
     
     let output = '';
     
-    // --- PROGRESSÃO (Primeiro bloco de cópia) ---
+    // --- PROGRESSÃO ---
     output += `// PROGRESSÃO\n`;
     output += formattedProgression;
     
-    // --- GERADORES (Segundo bloco de cópia) ---
+    // --- GERADORES ---
     output += `\n// GERADORES\n`;
     output += `Contexto: ${context.replace('-', ' ')}\n`;
     
@@ -782,9 +919,21 @@ function createUnifiedOutput(progressionArray, settings) {
             output += `Verticalidade: ${verticality}\n`;
         }
         
-        output += `Notas da Escala: ${suggestedScaleText.split(': ')[1]}\n`;
+        output += `Notas da Escala Geradora: ${suggestedScaleText.split(': ')[1]}\n`;
     } else {
-         output += `Notas da Escala: ${suggestedScaleText}\n`;
+         output += `Notas da Escala Geradora: ${suggestedScaleText}\n`;
+    }
+    
+    // --- SUGESTÕES DE IMPROVISO (Novo) ---
+    output += `\n// SUGESTÕES DE IMPROVISO\n`;
+    for (const chord in analysis) {
+        const scales = analysis[chord];
+        if (scales.length > 0) {
+            output += `\n- ${chord}:\n`;
+            scales.forEach(scale => {
+                output += `  * ${scale.note} ${scale.name} (${scale.color})\n`;
+            });
+        }
     }
     
     return output;
@@ -793,7 +942,6 @@ function createUnifiedOutput(progressionArray, settings) {
 
 function updateResults(progressionArray) {
     const resultsDiv = document.getElementById('results');
-    // CORREÇÃO: Garante que o container de resultados seja visível
     resultsDiv.style.display = 'flex';
 
     const baseRoot = currentSettings.rootNote;
@@ -801,13 +949,10 @@ function updateResults(progressionArray) {
     const verticality = currentSettings.verticality;
 
     const formattedProgression = currentProgression.map(measure => `| ${measure} `).join('') + '|';
-    // Atualiza a Progressão Visível (Bloco 1)
     document.getElementById('visual-progression').innerText = formattedProgression;
     
-    // Atualiza o Sumário (Visual) 
     const suggestedScaleName = getSuggestedScale(baseRoot, modeKey, currentSettings.context).split('(')[0].trim();
-    // Atualiza Escala Sugerida
-    document.getElementById('out-scale-name').innerText = `Escala Sugerida: ${suggestedScaleName} (${baseRoot})`;
+    document.getElementById('out-scale-name').innerText = `Escala Geradora: ${suggestedScaleName} (${baseRoot})`;
     document.getElementById('out-context').innerText = currentSettings.context.replace('-', ' ');
     document.getElementById('out-root').innerText = baseRoot; 
     document.getElementById('out-mode').innerText = getModeName(modeKey);
@@ -822,7 +967,35 @@ function updateResults(progressionArray) {
         verticalityP.style.display = 'none';
     }
 
-    const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings);
-    // Atualiza Progressão para Cópia (Bloco 3)
+    // NOVA ANÁLISE DE ESCALAS POR ACORDE
+    const analysis = analyzeProgression(progressionArray, currentSettings);
+    
+    // Formata o bloco de Sugestões de Improviso
+    let improOutput = '';
+    for (const chord in analysis) {
+        const contextualScales = analysis[chord].filter(s => s.contextual);
+        const otherScales = analysis[chord].filter(s => !s.contextual);
+        
+        improOutput += `${chord}:\n`;
+        
+        if (contextualScales.length > 0) {
+             improOutput += `  > PRIORIDADES:\n`;
+             contextualScales.forEach(scale => {
+                 improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
+             });
+        }
+        
+        if (otherScales.length > 0) {
+             improOutput += `  > OUTRAS OPÇÕES:\n`;
+             otherScales.forEach(scale => {
+                 improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
+             });
+        }
+        improOutput += '\n'; 
+    }
+    document.getElementById('impro-suggestions').innerText = improOutput.trim();
+
+    // Atualiza o bloco de Cópia Unificada (incluindo as sugestões)
+    const unifiedOutput = createUnifiedOutput(progressionArray, currentSettings, analysis);
     document.getElementById('chord-progression').innerText = unifiedOutput;
 }
