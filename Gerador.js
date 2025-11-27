@@ -1,4 +1,5 @@
 // Gerador.js
+// Depende do arquivo data.js
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -22,16 +23,16 @@ class GeradorDeProgressao {
             pesoAcumulado += pesos[chave];
             if (valorAleatorio <= pesoAcumulado) {
                 if (opcoes.length && typeof opcoes[0] === 'object') {
+                    // Retorna o objeto completo da função (ex: {grau: 'I', ...})
                     return opcoes.find(opcao => opcao.grau === chave);
                 }
-                return chave;
+                return chave; // Retorna a chave (ex: 'triade', 'setima')
             }
         }
         return opcoes.length ? opcoes[0] : null;
     }
 
     gerarMapaDiatonico(tonalidade_index, estrutura_escala) {
-        // [Implementação Simplificada]
         const mapa = {};
         const notas_base = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
         let indice_letra = this.notas[tonalidade_index].charCodeAt(0) - 'A'.charCodeAt(0);
@@ -57,7 +58,6 @@ class GeradorDeProgressao {
         if (this.mapa_tonal_ativo[indice_limpo] !== undefined) {
             return this.mapa_tonal_ativo[indice_limpo];
         }
-        // Retorna a primeira opção se for acidental e não estiver no mapa (prioriza a primeira cifragem)
         const nome_alternativo = NOMES_CIFRA_FIXOS[indice_limpo];
         return Array.isArray(nome_alternativo) ? nome_alternativo[0] : nome_alternativo;
     }
@@ -65,7 +65,6 @@ class GeradorDeProgressao {
     // --- Funções de Harmonização e Cifragem ---
 
     montarSufixo(funcao_base, tipo_complexidade) {
-        // [Implementação detalhada da função montarSufixo da etapa anterior]
         const qualidade = funcao_base.qualidade;
         let sufixo = (qualidade === "m" || qualidade === "dom" || qualidade === "dim") ? qualidade : "";
 
@@ -79,16 +78,19 @@ class GeradorDeProgressao {
             else if (Math.random() < 0.5) sufixo += "sus4";
             else sufixo += "5";
         }
-        return sufixo.replace('dom', ''); // Limpa dominante padrão
+        return sufixo.replace('dom', '');
     }
 
-    aplicarBaixoAlternativo(cifra_base, notas_acorde) {
+    aplicarBaixoAlternativo(cifra_base, notas_acorde, raiz_acorde_cifra) {
         if (this.config.incluirBaixosAlternativos && Math.random() < 0.2) {
-            // Lógica simplificada: usa a 3ª ou a 5ª como baixo
-            const graus_inversao = [notas_acorde[1], notas_acorde[2]];
+            // Lógica simplificada: usa a 3ª (4 semitons) ou a 5ª (7 semitons) como baixo
+            const graus_inversao = [4, 7]; 
             if (graus_inversao.length > 1) {
                 const baixo_index_relativo = graus_inversao[Math.floor(Math.random() * graus_inversao.length)];
-                const baixo_index_absoluto = (this.notas.indexOf(acorde_objeto.raiz) + baixo_index_relativo) % 12; // Necessita da Raiz original
+                
+                const raiz_index = this.notas.indexOf(raiz_acorde_cifra); // Raiz original
+                const baixo_index_absoluto = (raiz_index + baixo_index_relativo) % 12; 
+
                 const baixo_cifra = this.cifrarNota(baixo_index_absoluto);
                 return `${cifra_base}/${baixo_cifra}`;
             }
@@ -101,6 +103,9 @@ class GeradorDeProgressao {
         const raiz_index_absoluto = (tonalidade_index + grau_semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
+        // Simulação de notas do acorde (R, 3, 5, 7)
+        const notas_acorde = [0, 4, 7, 11]; 
+        
         const tipo_complexidade = this.escolherComPeso(Object.keys(this.pesos.complexidade), this.pesos.complexidade);
         let sufixo = this.montarSufixo(funcao_base, tipo_complexidade);
         let tensoes = ""; // Lógica de tensões omitida por brevidade
@@ -108,15 +113,15 @@ class GeradorDeProgressao {
         let cifra_final = raiz_cifra + sufixo + tensoes;
         
         // Aplica o baixo alternativo
-        cifra_final = this.aplicarBaixoAlternativo(cifra_final, [0, 4, 7]); // Notas 0, 4, 7 (R, 3, 5)
+        cifra_final = this.aplicarBaixoAlternativo(cifra_final, notas_acorde, raiz_cifra);
 
         return {
             raiz: raiz_cifra,
             cifra: cifra_final,
             funcao: funcao_base.grau,
             funcao_tipo: funcao_base.funcao,
-            substituicoes_opcoes: null, // Preenchido no gerarProgressao
-            sugestoes_escala: { contextual: { nome: `${raiz_cifra} Jônio`, estrutura: ESTRUTURA_INTERV_RELATIVA["Jônio"] } } // Simplificado
+            substituicoes_opcoes: null,
+            sugestoes_escala: { contextual: { nome: `${raiz_cifra} ${this.config.modo}`, estrutura: ESTRUTURA_INTERV_RELATIVA[this.config.modo.split(' ')[0]] || "Estrutura Padrão" } }
         };
     }
 
@@ -125,23 +130,65 @@ class GeradorDeProgressao {
     aplicarHarmoniaNegativa(acorde_objeto, eixo_semitom_total) {
         const raiz_index = this.notas.indexOf(acorde_objeto.raiz);
         // Neg(n) = (2 * Eixo - n) mod 12
-        const neg_raiz_index_ajustado = Math.round((2 * eixo_semitom_total - raiz_index) % 12 + 12) % 12;
+        const neg_raiz_index = (2 * eixo_semitom_total - raiz_index);
+        const neg_raiz_index_ajustado = Math.round((neg_raiz_index % 12 + 12) % 12);
         const neg_raiz_cifra = this.cifrarNota(neg_raiz_index_ajustado);
 
-        // Regra Negativa Simplificada: I Maj -> IV/V Menor; V Dom -> I/IV Maj; etc.
+        // Regra Negativa Simplificada: Tônica Maj -> Menor; Dominante -> Subdom oposto.
         let neg_sufixo = acorde_objeto.cifra.includes("m") ? "maj7" : "m7";
         
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
+    /**
+     * Gera as opções de substituição (Neg. Harm., Relativo, etc.).
+     */
+    gerarSugestoesDeSubstituicao(acorde_objeto) {
+        const substituicoes = [];
+
+        // --- Lógica de Substituição Funcional (Relativos Expandidos) ---
+        const funcao_original = acorde_objeto.funcao_tipo;
+        
+        if (funcao_original === "Tônica") {
+            substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "III", label: "III (Mediante)" }, { grau: "VI", label: "VI (Relativo Menor)" }] });
+        } else if (funcao_original === "Subdominante") {
+             substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "II", label: "II (Supertônica)" }, { grau: "IV", label: "IV (Subdominante)" }] });
+        } else if (funcao_original === "Dominante") {
+             substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "VII", label: "VII (Sensível)" }, { grau: "V", label: "V (Dominante)" }] });
+        }
+
+        // --- SubV7/V7 ---
+        if (acorde_objeto.cifra.includes("7") && !acorde_objeto.cifra.includes("maj")) { 
+            substituicoes.push({ tipo: "SubV7/V7" }); 
+        }
+
+        // --- Harmonia Negativa (Eixos) ---
+        const tonalidade_index = this.notas.indexOf(this.config.tonalidade);
+        const eixo_tonico_index = (tonalidade_index + 3.5); 
+        const eixo_dominante_index = (tonalidade_index + 11);
+        
+        substituicoes.push({ 
+            tipo: "Neg. Harm.",
+            eixos: [
+                { nome: "Eixo Tônico", eixo_valor: eixo_tonico_index },
+                { nome: "Eixo Dominante", eixo_valor: eixo_dominante_index }
+            ]
+        });
+
+        // --- AEM (Empréstimo Modal) ---
+        substituicoes.push({ tipo: "AEM" });
+
+        return substituicoes;
+    }
+
     // --- Função Principal e Output ---
 
     gerarProgressao() {
-        // Simulação de inputs (substituir pelos valores da UI)
         const tonalidade_base = this.config.tonalidade || "C";
         const tonalidade_index = this.notas.indexOf(tonalidade_base);
-        this.config.ritmica_acordes_por_comp = this.config.ritmica_acordes_por_comp || [1, 1, 1, 1];
-        this.config.incluirBaixosAlternativos = true;
+        
+        // Define o modo ativo para a classe (garantido pelo HTML/JS de inicialização)
+        this.escala_ativa = this.config.escala_ativa; 
         
         this.gerarMapaDiatonico(tonalidade_index, this.escala_ativa.estrutura);
 
@@ -150,7 +197,6 @@ class GeradorDeProgressao {
         let compasso_atual = 1;
         let acorde_no_compasso = 0;
 
-        // Lógica de Geração Simplificada (Apenas Tonal Fixo)
         for (let i = 0; i < total_acordes; i++) {
             const funcao = this.escolherComPeso(FUNCOES_HARMONICAS, this.pesos.contexto_tonal_fixo);
             const acorde_obj = this.harmonizarAcorde(funcao, tonalidade_index);
@@ -172,6 +218,29 @@ class GeradorDeProgressao {
         return output;
     }
 
+    transporProgressao(progressao_original, nova_tonalidade) {
+        // [Lógica de transposição]
+        const tonalidade_original = this.config.tonalidade;
+        const diferenca_semitons = (this.notas.indexOf(nova_tonalidade) - this.notas.indexOf(tonalidade_original) + 12) % 12;
+
+        this.gerarMapaDiatonico(this.notas.indexOf(nova_tonalidade), this.escala_ativa.estrutura); 
+        
+        const progressao_transposta = progressao_original.map(acorde_original => {
+            let cifra = acorde_original.cifra;
+            // Lógica complexa de extração de raiz e sufixo
+            const raiz_original_index = this.notas.indexOf(acorde_original.raiz);
+            const nova_raiz_index = (raiz_original_index + diferenca_semitons) % 12;
+            const nova_raiz_cifra = this.cifrarNota(nova_raiz_index);
+            
+            // Lógica simplificada: Apenas substitui a raiz, mantendo o sufixo
+            const nova_cifra_completa = nova_raiz_cifra + cifra.substring(acorde_original.raiz.length); 
+
+            return { ...acorde_original, cifra: nova_cifra_completa, raiz: nova_raiz_cifra };
+        });
+
+        return progressao_transposta;
+    }
+
     formatarOutput(progressao_objetos) {
         let cifra_formatada = "";
         let compasso_atual = 0;
@@ -191,5 +260,34 @@ class GeradorDeProgressao {
             progressao_cifrada_formatada: cifra_formatada,
             timestamp: new Date().toLocaleString()
         };
+    }
+
+    // --- Funções de Exportação/Importação ---
+    exportarHistorico() {
+        const json_string = JSON.stringify(this.progressoes_historico, null, 2);
+        const blob = new Blob([json_string], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'historico_progressao_harmonica.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    importarHistorico(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                this.progressoes_historico = JSON.parse(e.target.result);
+                // A UI precisaria ser atualizada para mostrar o histórico carregado
+                console.log("Histórico de progressões importado com sucesso.");
+                // Chamar a função de renderizar histórico aqui se estivesse na UI
+            } catch (error) {
+                console.error("Erro ao importar histórico:", error);
+                alert("Falha ao carregar o arquivo. Certifique-se de que é um JSON válido.");
+            }
+        };
+        reader.readAsText(file);
     }
 }
