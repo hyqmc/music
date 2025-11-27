@@ -301,7 +301,7 @@ function analyzeProgression(progressionArray, settings) {
 }
 
 // =======================================================
-// MÓDULO DE INICIALIZAÇÃO E LISTENERS (Mantido)
+// MÓDULO DE INICIALIZAÇÃO E LISTENERS 
 // =======================================================
 let currentProgression = []; 
 let currentSettings = {}; 
@@ -614,8 +614,8 @@ function determineQuality(root, context, settings) {
              return 'm'; 
         }
         
-        // 3. VERIFICA QUALIDADE MAIOR (Inclui a simplificação de Maj7, 7, 9, 13)
-        // Se for Maj, Maj7, 7 ou '' (tríade maior pura), retorna '' (tríade maior)
+        // 3. VERIFICA QUALIDADE MAIOR (Garante que só Majors sejam retornados)
+        // A chave aqui é que agora sabemos que o acorde NÃO é menor.
         if (baseQuality === '' || baseQuality.includes('Maj7') || baseQuality.includes('7')) {
              return ''; 
         }
@@ -986,7 +986,6 @@ function updateResults(progressionArray) {
         
         if (otherScales.length > 0) {
              improOutput += `  > OUTRAS OPÇÕES:\n`;
-             // CORRIGIDO: O ERRO DE SINTAXE DEVE ESTAR AQUI!
              otherScales.forEach(scale => {
                  improOutput += `  - ${scale.note} ${scale.name} (${scale.color})\n`;
              });
