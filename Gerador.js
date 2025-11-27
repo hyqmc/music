@@ -1,4 +1,5 @@
-// Gerador.js (Versão Final com Correções de Lógica e Complexidade)
+// Gerador.js
+// Depende do arquivo data.js
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -9,9 +10,8 @@ class GeradorDeProgressao {
         this.escala_ativa = ESCALAS["Diatônica (Maior)"].modos[0];
         this.mapa_tonal_ativo = {};
     }
-    
-    // [FUNÇÕES UTILITÁRIAS AQUI: escolherComPeso, gerarMapaDiatonico, cifrarNota]
-    // ... (Mantidas conforme as últimas versões estáveis) ...
+
+    // --- Funções Utilitárias Básicas ---
 
     escolherComPeso(opcoes, pesos) {
         const somaTotalPesos = Object.values(pesos).reduce((soma, peso) => soma + peso, 0);
@@ -60,18 +60,14 @@ class GeradorDeProgressao {
         return Array.isArray(nome_alternativo) ? nome_alternativo[0] : nome_alternativo;
     }
 
+    // --- LÓGICA DE COMPLEXIDADE E CIFRAGEM ---
 
-    // --- NOVA FUNÇÃO DE LÓGICA DE COMPLEXIDADE ---
     getComplexidadeAtiva() {
-        const tipos_marcados = this.config.complexidade; // Array de strings (ex: ['triade', 'sus4'])
-        
+        const tipos_marcados = this.config.complexidade;
         let pesos_filtrados = {};
-        
-        // 1. Filtra os níveis de base (triade, setima, extensão)
         const niveis_base = ['triade', 'setima', 'extensao'];
         
         if (!tipos_marcados.some(t => niveis_base.includes(t))) {
-            // Se nada base foi marcado, força TRIADE (comportamento seguro)
             pesos_filtrados['triade'] = 100;
         } else {
              for (const key of niveis_base) {
@@ -80,49 +76,60 @@ class GeradorDeProgressao {
                  }
              }
         }
-        
         return {
             niveis: pesos_filtrados,
             tipos_especiais: tipos_marcados.filter(t => !niveis_base.includes(t))
         };
     }
 
-    // --- FUNÇÃO DE CIFRAGEM (CORRIGIDA) ---
     montarSufixo(funcao_base, tipo_complexidade) {
         const qualidade = funcao_base.qualidade;
         let sufixo = (qualidade === "m" || qualidade === "dom" || qualidade === "dim") ? qualidade : "";
-        
         const tipos_especiais = this.config.complexidade;
+        
+        let extensoes_cifradas = '';
 
-        // 1. Aplica o nível de complexidade (TRIADE, SETIMA, EXTENSAO)
+        // 1. Aplica o nível de complexidade (triade, setima, extensão)
         if (tipo_complexidade === "setima" || tipo_complexidade === "extensao") {
             if (qualidade === "maj") sufixo = "maj7";
             else if (qualidade === "dom") sufixo = "7";
             else if (qualidade === "m") sufixo += "7";
             else if (qualidade === "m7(b5)") sufixo = "m7(b5)";
+            
+            // Lógica de Extensões
+            if (tipo_complexidade === "extensao") {
+                let tensoes = ['9'];
+                if (Math.random() > 0.4) tensoes.push('13'); 
+                if (Math.random() < 0.3 && sufixo.includes('maj')) tensoes.push('#11'); 
+                extensoes_cifradas = `(${tensoes.join(',')})`;
+            }
         } 
         
-        // 2. Aplica TIPOS ESPECIAIS (Separados e com baixa probabilidade)
+        // 2. Aplica TIPOS ESPECIAIS
         if (tipos_especiais.includes('aumentado') && qualidade !== "m" && Math.random() < 0.15) {
-             return "+"; // Ex: C+
+             return "+";
         }
-        if (tipos_especiais.includes('diminuto') && qualidade === "m" && Math.random() < 0.1) {
-             return "dim"; // Ex: Cdim
+        if (tipos_especiais.includes('diminuto') && qualidade !== "m7(b5)" && Math.random() < 0.1) {
+             return "dim";
         }
-        if (tipos_especiais.includes('sus4') && qualidade === "dom" && Math.random() < 0.2) {
+        if (tipos_especiais.includes('sus4') && (qualidade === "dom" || qualidade === "maj") && Math.random() < 0.2) {
              return "sus4";
         }
         if (tipos_especiais.includes('powerchord') && Math.random() < 0.1) {
              return "5";
         }
+        if (tipos_especiais.includes('quartal') && Math.random() < 0.08) {
+            return "Quartal"; 
+        }
+        if (tipos_especiais.includes('quintal') && Math.random() < 0.08) {
+            return "Quintal"; 
+        }
         
-        return sufixo.replace('dom', '');
+        return sufixo.replace('dom', '') + extensoes_cifradas;
     }
-    
-    // ... (aplicarBaixoAlternativo, harmonizarAcorde)
-    
+
     aplicarBaixoAlternativo(cifra_base, raiz_acorde_cifra) {
-        if (this.config.incluirBaixosAlternativos && this.config.complexidade.includes('slash_chords') && Math.random() < 0.2) {
+        if (this.config.complexidade.includes('slash_chords') && Math.random() < 0.2) {
             const graus_inversao_semitons = [4, 7]; 
             
             if (graus_inversao_semitons.length > 0) {
@@ -145,7 +152,7 @@ class GeradorDeProgressao {
         const raiz_index_absoluto = (tonalidade_index + grau_semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
-        const complexidade_ativa = this.getComplexidadeAtiva(); // Obtém os níveis filtrados
+        const complexidade_ativa = this.getComplexidadeAtiva();
         const tipo_complexidade = this.escolherComPeso(Object.keys(complexidade_ativa.niveis), complexidade_ativa.niveis);
         
         let sufixo = this.montarSufixo(funcao_base, tipo_complexidade);
@@ -165,7 +172,16 @@ class GeradorDeProgressao {
         };
     }
     
-    // ... (restante das funções: gerarSugestoesDeSubstituicao, gerarProgressao, formatarOutput, etc.)
+    aplicarHarmoniaNegativa(acorde_objeto, eixo_semitom_total) {
+        const raiz_index = this.notas.indexOf(acorde_objeto.raiz);
+        const neg_raiz_index = (2 * eixo_semitom_total - raiz_index);
+        const neg_raiz_index_ajustado = Math.round((neg_raiz_index % 12 + 12) % 12);
+        const neg_raiz_cifra = this.cifrarNota(neg_raiz_index_ajustado);
+
+        let neg_sufixo = acorde_objeto.cifra.includes("m") ? "maj7" : "m7";
+        
+        return `${neg_raiz_cifra}${neg_sufixo}`;
+    }
 
     gerarSugestoesDeSubstituicao(acorde_objeto) {
         const substituicoes = [];
@@ -200,14 +216,34 @@ class GeradorDeProgressao {
         return substituicoes;
     }
 
-    // --- Função Principal e Output ---
+    // --- FUNÇÕES PRINCIPAIS (INCLUINDO AS FALTANTES) ---
 
     gerarProgressao() {
-        const tonalidade_base = this.config.tonalidade || "C";
+        // Lógica para tratar entradas "Aleatório"
+        
+        // 1. Tonalidade Aleatória
+        let tonalidade_base = this.config.tonalidade;
+        if (tonalidade_base === 'Aleatório') {
+            tonalidade_base = this.notas[Math.floor(Math.random() * this.notas.length)];
+            this.config.tonalidade = tonalidade_base;
+        }
         const tonalidade_index = this.notas.indexOf(tonalidade_base);
         
-        this.escala_ativa = this.config.escala_ativa; 
+        // 2. Escala e Modo Aleatórios
+        let modo_obj = this.config.escala_ativa;
+        if (this.config.escala === 'Aleatório' || this.config.modo === 'Aleatório' || !modo_obj) {
+            const escalas_chaves = Object.keys(ESCALAS);
+            const escala_chave = escalas_chaves[Math.floor(Math.random() * escalas_chaves.length)];
+            const modos_disponiveis = ESCALAS[escala_chave].modos;
+            
+            modo_obj = modos_disponiveis[Math.floor(Math.random() * modos_disponiveis.length)];
+            
+            this.config.escala_ativa = modo_obj;
+            this.config.escala = escala_chave;
+            this.config.modo = modo_obj.nome;
+        }
         
+        this.escala_ativa = modo_obj; 
         this.gerarMapaDiatonico(tonalidade_index, this.escala_ativa.estrutura);
 
         const total_acordes = this.config.ritmica_acordes_por_comp.reduce((a, b) => a + b, 0);
@@ -236,6 +272,9 @@ class GeradorDeProgressao {
         return output;
     }
 
+    /**
+     * @description [INCLUÍDA] Formata o objeto da progressão para a string cifrada final.
+     */
     formatarOutput(progressao_objetos) {
         let cifra_formatada = "";
         let compasso_atual = 0;
@@ -257,6 +296,9 @@ class GeradorDeProgressao {
         };
     }
 
+    /**
+     * @description [INCLUÍDA] Transpõe a progressão para uma nova tonalidade.
+     */
     transporProgressao(progressao_original, nova_tonalidade) {
         const tonalidade_original = this.config.tonalidade;
         const diferenca_semitons = (this.notas.indexOf(nova_tonalidade) - this.notas.indexOf(tonalidade_original) + 12) % 12;
@@ -269,6 +311,7 @@ class GeradorDeProgressao {
             const nova_raiz_index = (raiz_original_index + diferenca_semitons) % 12;
             const nova_raiz_cifra = this.cifrarNota(nova_raiz_index);
             
+            // Tenta manter o sufixo, assumindo que está correto para a nova raiz
             const nova_cifra_completa = nova_raiz_cifra + cifra.substring(acorde_original.raiz.length); 
 
             return { ...acorde_original, cifra: nova_cifra_completa, raiz: nova_raiz_cifra };
@@ -277,7 +320,9 @@ class GeradorDeProgressao {
         return progressao_transposta;
     }
     
-    // [FUNÇÕES DE HISTÓRICO AQUI: exportarHistorico, importarHistorico]
+    /**
+     * @description [INCLUÍDA] Exporta o histórico como arquivo JSON.
+     */
     exportarHistorico() {
         const json_string = JSON.stringify(this.progressoes_historico, null, 2);
         const blob = new Blob([json_string], { type: 'application/json' });
@@ -290,6 +335,9 @@ class GeradorDeProgressao {
         document.body.removeChild(a);
     }
 
+    /**
+     * @description [INCLUÍDA] Importa o histórico a partir de um arquivo JSON.
+     */
     importarHistorico(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
