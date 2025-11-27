@@ -7,10 +7,8 @@
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
         h1, h2, h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
         .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
-        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; }
-        .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.5em; display: block; margin-bottom: 5px; }
-        .btn-acao, .btn-substituir { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
-        #complexidade-opcoes label { margin-right: 15px; }
+        .btn-acao { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
+        #complexidade-opcoes label { margin-right: 15px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -40,11 +38,18 @@
         <h3>2. Complexidade e Estrutura Rítmica</h3>
         <label>Tipos de Acorde:</label><br>
         <div id="complexidade-opcoes">
-            <label><input type="checkbox" name="complexidade" value="triade" checked> Tríades</label>
-            <label><input type="checkbox" name="complexidade" value="setima" checked> Sétimas</label>
-            <label><input type="checkbox" name="complexidade" value="extensao"> Extensões (9/11/13)</label>
-            <label><input type="checkbox" name="complexidade" value="especial"> Diminutos/Aumentados/Suspensos</label>
-            <label><input type="checkbox" name="complexidade" value="slash_chords" id="incluir-baixos-alternativos"> Baixos Alternativos (/)</label>
+            <label><input type="checkbox" name="complexidade_option" value="triade" checked> Tríades</label>
+            <label><input type="checkbox" name="complexidade_option" value="setima" checked> Sétimas</label>
+            <label><input type="checkbox" name="complexidade_option" value="extensao"> Extensões (9/11/13)</label>
+            
+            <hr style="margin: 5px 0;">
+            
+            <label><input type="checkbox" name="complexidade_option" value="sus4"> Suspensos</label>
+            <label><input type="checkbox" name="complexidade_option" value="aumentado"> Aumentados (+)</label>
+            <label><input type="checkbox" name="complexidade_option" value="diminuto"> Diminutos (dim)</label>
+            <label><input type="checkbox" name="complexidade_option" value="powerchord"> Powerchords (5)</label>
+            <label><input type="checkbox" name="complexidade_option" value="quartal"> Quartais/Quintais</label>
+            <label><input type="checkbox" name="complexidade_option" value="slash_chords"> Baixos Alternativos (/)</label>
         </div>
 
         <br>
@@ -70,10 +75,6 @@
 
     <hr/>
 
-    <h2>Progressão com Substituições Interativas</h2>
-    <div id="progressao-com-botoes">
-        </div>
-    
     <script>
         // --- INICIALIZAÇÃO DA UI E LÓGICA DE DADOS ---
         
@@ -100,18 +101,12 @@
         }
         
         function inicializarUI() {
-            // 1. Tonalidades e Transposição
+            // Preenchimento de listas
             preencherSelect('tonalidade-base', NOTAS);
             preencherSelect('transpor-para', NOTAS);
-
-            // 2. Escalas
             preencherSelect('escala-geradora', Object.keys(ESCALAS));
-            
-            // 3. Modos
             document.getElementById('escala-geradora').addEventListener('change', preencherModos);
             preencherModos();
-            
-            // 4. Contextos
             preencherSelect('contexto-gerador', CONTEXTOS_GERADORES, 'value', 'text');
         }
         
@@ -123,8 +118,8 @@
             const escalaObj = ESCALAS[escalaNome];
             const modoObj = escalaObj.modos.find(m => m.nome === modoNome);
 
-            // Coleta a complexidade selecionada
-            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade"]:checked')).map(cb => cb.value);
+            // CORRIGIDO: Coleta todos os valores dos checkboxes com o mesmo nome
+            const complexidadeSelecionada = Array.from(document.querySelectorAll('input[name="complexidade_option"]:checked')).map(cb => cb.value);
 
             return {
                 tonalidade: document.getElementById('tonalidade-base').value,
@@ -133,8 +128,8 @@
                 modo: modoNome,
                 escala_ativa: modoObj,
                 ritmica_acordes_por_comp: document.getElementById('ritmo-input').value.split(',').map(n => parseInt(n.trim(), 10) || 1),
-                complexidade: complexidadeSelecionada,
-                incluirBaixosAlternativos: document.getElementById('incluir-baixos-alternativos').checked
+                complexidade: complexidadeSelecionada, // Array de todos os tipos marcados
+                incluirBaixosAlternativos: complexidadeSelecionada.includes('slash_chords') // Bool baseado no array
             };
         }
 
@@ -147,12 +142,27 @@
                 progressao_ativa = resultado;
                 
                 document.getElementById('cifragem-texto').textContent = resultado.progressao_cifrada_formatada;
-                // renderizarResultado(resultado); // Descomentar quando a função de renderização estiver completa
+                alert("Progressão Gerada com Sucesso! (Verifique a área cifrada)");
                 
             } catch (e) {
                 console.error("Erro na geração:", e);
                 document.getElementById('cifragem-texto').textContent = `ERRO: Não foi possível gerar a progressão. Verifique o console. Detalhe: ${e.message}`;
             }
+        }
+
+        // Simulação da Transposição UI (Requer que transporProgressao exista em Gerador.js)
+        function transporProgressaoUI() {
+            const nova_tonalidade = document.getElementById('transpor-para').value;
+            if (!progressao_ativa || !progressao_ativa.progressao) return alert("Gere uma progressão primeiro.");
+            
+            const progressao_transposta = gerador.transporProgressao(progressao_ativa.progressao, nova_tonalidade);
+            
+            gerador.config.tonalidade = nova_tonalidade;
+            const novo_resultado = gerador.formatarOutput(progressao_transposta);
+            progressao_ativa = novo_resultado;
+            
+            document.getElementById('cifragem-texto').textContent = novo_resultado.progressao_cifrada_formatada;
+            alert(`Progressão transposta para ${nova_tonalidade}`);
         }
 
         function copiarCifragem() {
