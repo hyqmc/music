@@ -1,4 +1,4 @@
-// Gerador.js (COMPLETAMENTE COMPILADO E COM COERÊNCIA DE EXTENSÕES)
+// Gerador.js (CÓDIGO COMPLETO COM CORREÇÃO DE RELATIVOS FUNCIONAIS)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -171,7 +171,7 @@ class GeradorDeProgressao {
         };
     }
 
-    // --- FUNÇÕES DE SUBSTITUIÇÃO COERENTE (CORRIGIDAS) ---
+    // --- FUNÇÕES DE SUBSTITUIÇÃO COERENTE ---
 
     localizarAcordePorGrau(grau_alvo, tonalidade_base) {
         const funcao_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
@@ -181,7 +181,6 @@ class GeradorDeProgressao {
         const raiz_index_absoluto = (tonalidade_index + funcao_obj.semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
-        // Define o sufixo base estritamente pela qualidade da função diatônica
         let sufixo_base = '';
         if (funcao_obj.qualidade === 'dom') sufixo_base = '7';
         else if (funcao_obj.qualidade === 'm') sufixo_base = 'm';
@@ -207,7 +206,6 @@ class GeradorDeProgressao {
         
         const sufixo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
 
-        // 1. Limpeza: Isola tensões/extensões/baixos originais que não são a qualidade base
         const regex_qualidade = /^(maj|m|dom|dim|m7\(b5\)|\+)?/;
         const tensoes_e_baixos = sufixo_original.replace(regex_qualidade, '');
 
@@ -226,23 +224,23 @@ class GeradorDeProgressao {
              if (sufixo_original.includes('maj')) novo_sufixo = 'maj7';
              else if (sufixo_original.includes('7')) novo_sufixo = '7';
              else if (sufixo_original.includes('+')) novo_sufixo = '+';
-             else if (nivel_complexidade) novo_sufixo = ''; // Mantém como tríade Maior se não tiver 7/maj7
+             else if (nivel_complexidade) novo_sufixo = ''; // Se tinha 7/maj7 mas a função é Maj, assume Maj Triade
              
         } else {
+            // Outros (dom, dim, m7b5) usam o sufixo do diatônico
             novo_sufixo = qualidade_diatonica === 'dom' ? '7' : qualidade_diatonica;
         }
         
-        // 3. Adiciona as Extensões Coerentes (Lógica de coerência)
+        // 3. Adiciona as Extensões Coerentes
         let extensoes_coerentes = '';
         if (tinha_extensoes) {
             let novas_tensoes = ['9']; 
             if (Math.random() > 0.5) novas_tensoes.push('13'); 
             if (this.config.modo.includes('Lídio') && Math.random() < 0.4) {
-                novas_tensoes.push('#11'); // Permite #11 em Lídio
+                novas_tensoes.push('#11'); 
             }
             extensoes_coerentes = `(${novas_tensoes.join(',')})`;
         }
-
 
         // Montagem final: Nova Raiz + Novo Sufixo + Extensões Coerentes + Sobras (Baixos)
         return nova_raiz_cifra + novo_sufixo + extensoes_coerentes + tensoes_e_baixos;
@@ -295,11 +293,18 @@ class GeradorDeProgressao {
     gerarSugestoesDeSubstituicao(acorde_objeto) {
         const substituicoes = [];
         const funcao_original = acorde_objeto.funcao_tipo;
+        const grau_original = acorde_objeto.funcao;
         const tonalidade_index = this.notas.indexOf(this.config.tonalidade); 
         
-        // Relativos
+        // Relativos (CORRIGIDO: Lógica para I, III e VI)
         if (funcao_original === "Tônica") {
-            substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "III", label: "III (Mediante)" }, { grau: "VI", label: "VI (Relativo Menor)" }] });
+            if (grau_original === "I") {
+                substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "III", label: "III (Mediante)" }, { grau: "VI", label: "VI (Relativo Menor)" }] });
+            } else if (grau_original === "VI") {
+                 substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "I", label: "I (Relativo Maior)" }, { grau: "III", label: "III (Mediante)" }] });
+            } else if (grau_original === "III") {
+                 substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "I", label: "I (Relativo Maior)" }, { grau: "VI", label: "VI (Relativo Menor)" }] });
+            }
         } else if (funcao_original === "Subdominante") {
              substituicoes.push({ tipo: "Relativo", acoes: [{ grau: "II", label: "II (Supertônica)" }, { grau: "IV", label: "IV (Subdominante)" }] });
         } else if (funcao_original === "Dominante") {
