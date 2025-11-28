@@ -2,21 +2,93 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Gerador de Progressões Harmônicas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Gerador de Progressões Harmônicas</title>
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        /* --- ESTILOS MOBILE-FIRST (CORE) --- */
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 10px; }
         h1, h2, h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
-        .cifragem-progressao { font-size: 2.2em; font-family: 'Courier New', monospace; border: 1px solid #0056b3; padding: 15px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 20px; }
-        .btn-acao, .btn-substituir, .btn-sub-opcao { padding: 5px 8px; margin: 2px; cursor: pointer; border: 1px solid #ccc; background-color: #fff; border-radius: 3px; font-size: 0.8em; }
-        #complexidade-opcoes label { margin-right: 15px; display: inline-block; }
-        #dados-geracao { background-color: #f0f8ff; padding: 10px; border: 1px dashed #0056b3; margin-bottom: 20px; }
-        #pesos-sliders label { display: inline-block; width: 150px; text-align: right; margin-right: 10px; }
-        #historico-lista { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
-        .historico-item { padding: 5px; border-bottom: 1px dotted #ccc; cursor: pointer; font-size: 0.9em; }
-        .acorde-container { display: inline-block; margin: 0 15px 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; text-align: center; }
-        .cifra-principal { font-weight: bold; color: #0056b3; font-size: 1.2em; display: block; margin-bottom: 5px; }
-        .substituicao-area { margin-top: 5px; border-top: 1px dashed #eee; padding-top: 5px; }
-        .sub-opcoes-dropdown { border: 1px solid #ccc; padding: 5px; margin-top: 5px; text-align: left; display: none; } /* Inicialmente escondido */
+        
+        /* Layout Geral (Empilhamento) */
+        #config-inputs label,
+        #config-inputs select,
+        #config-inputs input[type="text"] {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        /* Título do Acordeão (Para Toque) */
+        .section-header {
+            cursor: pointer;
+            padding: 10px 0;
+            border-bottom: 1px solid #ccc;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-header:hover { background-color: #f0f0f0; }
+        .section-content {
+            padding: 10px 0;
+            display: none; /* Conteúdo oculto por padrão */
+        }
+        .section-header .toggle-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s;
+        }
+        .section-header.active .toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        /* Cifragem e Resultado */
+        .cifragem-progressao { 
+            font-size: 1.8em; /* Menor em mobile */
+            font-family: 'Courier New', monospace; border: 1px solid #0056b3; 
+            padding: 10px; background-color: #f9f9f9; white-space: pre-wrap; margin-bottom: 15px; 
+            overflow-x: auto; /* Permite scroll horizontal */
+        }
+        .btn-acao, .btn-substituir, .btn-sub-opcao { 
+            padding: 8px 12px; margin: 4px 2px; border-radius: 5px; font-size: 0.9em; 
+            /* Aumenta o tamanho para toque */
+        }
+        
+        /* Sliders de Peso (Ajuste Mobile) */
+        #pesos-sliders label {
+            width: 45%; /* Reduz a largura da label */
+            text-align: left;
+            margin-bottom: 5px;
+        }
+        #pesos-sliders input[type="range"] {
+            width: 45%; 
+        }
+        #pesos-sliders span { display: inline-block; width: 8%; }
+
+        /* Botões de Complexidade (Pills/Seleção Otimizada) */
+        #complexidade-opcoes label {
+            display: inline-block;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 4px;
+            cursor: pointer;
+            text-align: center;
+            width: auto; /* Permite que os botões se ajustem ao conteúdo */
+        }
+        #complexidade-opcoes input[type="checkbox"] {
+            display: none;
+        }
+        #complexidade-opcoes input[type="checkbox"]:checked + label {
+            background-color: #0056b3;
+            color: white;
+            border-color: #004085;
+        }
+
+        /* Acordes Interativos */
+        .acorde-container {
+             display: inline-block; margin: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; vertical-align: top; text-align: center; 
+        }
     </style>
 </head>
 <body>
@@ -27,77 +99,94 @@
     <h1>🎵 Gerador de Progressões Harmônicas</h1>
 
     <div id="config-inputs">
-        <h3>1. Contexto, Tonalidade, Escala e Modos</h3>
         
-        <label>Contexto Gerador:</label>
-        <select id="contexto-gerador"></select>
-        
-        <label>Tonalidade Base:</label>
-        <select id="tonalidade-base"></select>
-        
-        <label>Escala Geradora:</label>
-        <select id="escala-geradora"></select>
+        <div class="section-header active" data-target="content-1">
+            <h3>1. Contexto e Escala</h3><span class="toggle-icon">▶</span>
+        </div>
+        <div class="section-content" id="content-1" style="display: block;">
+            <label>Contexto Gerador:</label>
+            <select id="contexto-gerador"></select>
+            
+            <label>Tonalidade Base:</label>
+            <select id="tonalidade-base"></select>
+            
+            <label>Escala Geradora:</label>
+            <select id="escala-geradora"></select>
 
-        <label>Modo:</label>
-        <select id="modo-ativo"></select>
+            <label>Modo:</label>
+            <select id="modo-ativo"></select>
+        </div>
         
         <hr/>
         
-        <h3>2. Complexidade e Estrutura Rítmica</h3>
-        <label>Tipos de Acorde:</label><br>
-        <div id="complexidade-opcoes">
-            <label><input type="checkbox" name="complexidade_option" value="triade" checked> Tríades</label>
-            <label><input type="checkbox" name="complexidade_option" value="setima" checked> Sétimas</label>
-            <label><input type="checkbox" name="complexidade_option" value="extensao"> Extensões (9/11/13)</label>
-            
-            <hr style="margin: 5px 0;">
-            
-            <label><input type="checkbox" name="complexidade_option" value="sus4"> Suspensos</label>
-            <label><input type="checkbox" name="complexidade_option" value="aumentado"> Aumentados (+)</label>
-            <label><input type="checkbox" name="complexidade_option" value="diminuto"> Diminutos (dim)</label>
-            <label><input type="checkbox" name="complexidade_option" value="powerchord"> Powerchords (5)</label>
-            <label><input type="checkbox" name="complexidade_option" value="quartal"> Quartais</label>
-            <label><input type="checkbox" name="complexidade_option" value="quintal"> Quintais</label>
-            <label><input type="checkbox" name="complexidade_option" value="slash_chords"> Baixos Alternativos (/)</label>
+        <div class="section-header" data-target="content-2">
+            <h3>2. Complexidade e Estrutura</h3><span class="toggle-icon">▶</span>
         </div>
+        <div class="section-content" id="content-2">
+            <label>Tipos de Acorde:</label><br>
+            <div id="complexidade-opcoes">
+                <input type="checkbox" id="cb-triade" name="complexidade_option" value="triade" checked><label for="cb-triade">Tríades</label>
+                <input type="checkbox" id="cb-setima" name="complexidade_option" value="setima" checked><label for="cb-setima">Sétimas</label>
+                <input type="checkbox" id="cb-extensao" name="complexidade_option" value="extensao"><label for="cb-extensao">Extensões</label>
+                
+                <hr style="margin: 5px 0;">
+                
+                <input type="checkbox" id="cb-sus4" name="complexidade_option" value="sus4"><label for="cb-sus4">Suspensos</label>
+                <input type="checkbox" id="cb-aumentado" name="complexidade_option" value="aumentado"><label for="cb-aumentado">Aumentados (+)</label>
+                <input type="checkbox" id="cb-diminuto" name="complexidade_option" value="diminuto"><label for="cb-diminuto">Diminutos</label>
+                <input type="checkbox" id="cb-powerchord" name="complexidade_option" value="powerchord"><label for="cb-powerchord">Powerchords</label>
+                <input type="checkbox" id="cb-quartal" name="complexidade_option" value="quartal"><label for="cb-quartal">Quartais</label>
+                <input type="checkbox" id="cb-quintal" name="complexidade_option" value="quintal"><label for="cb-quintal">Quintais</label>
+                <input type="checkbox" id="cb-slash_chords" name="complexidade_option" value="slash_chords"><label for="cb-slash_chords">Baixos Alternativos (/)</label>
+            </div>
 
+            <br>
+            <label>Estrutura Rítmica (Acordes/Comp.):</label>
+            <input type="text" id="ritmo-input" value="1,1,2,1" placeholder="Ex: 1,1,2,1">
+        </div>
+        
         <br>
-        <label>Estrutura Rítmica (Acordes/Comp.):</label>
-        <input type="text" id="ritmo-input" value="1,1,2,1" placeholder="Ex: 1,1,2,1">
-        
-        <br><br>
-        
         <button class="btn-acao" onclick="gerarNovaProgressao()">GERAR PROGRESSÃO</button>
+        
 
         <hr/>
         
         <div id="painel-pesos">
-            <h3>4. Pesos e Probabilidades (Tonal Fixo)</h3>
-            <div id="pesos-sliders">
-                <label>Tônica (I, III, VI):</label>
-                <input type="range" id="peso-tonica" min="10" max="80" value="45"> <span id="val-tonica">45%</span><br>
-                
-                <label>Dominante (V, VII):</label>
-                <input type="range" id="peso-dominante" min="10" max="80" value="35"> <span id="val-dominante">35%</span><br>
-                
-                <label>Subdominante (II, IV):</label>
-                <input type="range" id="peso-subdominante" min="10" max="80" value="20"> <span id="val-subdominante">20%</span><br>
+            <div class="section-header" data-target="content-3">
+                <h3>3. Pesos e Probabilidades</h3><span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content" id="content-3">
+                <p>Ajuste os pesos dos centros funcionais (Total: 100%):</p>
+                <div id="pesos-sliders">
+                    <label>Tônica (I, III, VI):</label>
+                    <input type="range" id="peso-tonica" min="10" max="80" value="45"> <span id="val-tonica">45%</span><br>
+                    
+                    <label>Dominante (V, VII):</label>
+                    <input type="range" id="peso-dominante" min="10" max="80" value="35"> <span id="val-dominante">35%</span><br>
+                    
+                    <label>Subdominante (II, IV):</label>
+                    <input type="range" id="peso-subdominante" min="10" max="80" value="20"> <span id="val-subdominante">20%</span><br>
+                </div>
             </div>
         </div>
         
         <hr/>
 
-        <h3>5. Transposição e Histórico</h3>
-        <button class="btn-acao" onclick="transporProgressaoUI()">TRANSPOR</button>
-        <select id="transpor-para"></select>
-        
-        <br><br>
+        <div class="section-header" data-target="content-4">
+            <h3>4. Transposição e Histórico</h3><span class="toggle-icon">▶</span>
+        </div>
+        <div class="section-content" id="content-4">
+            <button class="btn-acao" onclick="transporProgressaoUI()">TRANSPOR</button>
+            <select id="transpor-para"></select>
+            
+            <br><br>
 
-        <button class="btn-acao" onclick="gerador.exportarHistorico()">Exportar Histórico</button>
-        <input type="file" id="importar-historico-input" accept=".json" style="display: none;">
-        <button class="btn-acao" onclick="document.getElementById('importar-historico-input').click()">Importar Histórico</button>
+            <button class="btn-acao" onclick="gerador.exportarHistorico()">Exportar Histórico</button>
+            <input type="file" id="importar-historico-input" accept=".json" style="display: none;">
+            <button class="btn-acao" onclick="document.getElementById('importar-historico-input').click()">Importar Histórico</button>
 
-        <div id="historico-lista"></div>
+            <div id="historico-lista"></div>
+        </div>
 
     </div>
 
@@ -170,7 +259,29 @@
             });
         }
 
+        function toggleAcordeao(header) {
+            const contentId = header.getAttribute('data-target');
+            const content = document.getElementById(contentId);
+            const icon = header.querySelector('.toggle-icon');
+
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+                header.classList.remove('active');
+            } else {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+                header.classList.add('active');
+            }
+        }
+
         function inicializarUI() {
+            // Inicializa Acordeão
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', () => toggleAcordeao(header));
+            });
+
+            // Preenchimento de listas
             preencherSelect('tonalidade-base', NOTAS, 'value', 'text', true);
             preencherSelect('transpor-para', NOTAS, 'value', 'text', true);
             preencherSelect('escala-geradora', Object.keys(ESCALAS), 'value', 'text', true);
@@ -197,9 +308,14 @@
                     renderizarHistorico(); 
                 }
             });
+            
+            // Garante que o primeiro acordeão esteja aberto por padrão (content-1)
+            document.getElementById('content-1').style.display = 'block';
+            document.querySelector('.section-header[data-target="content-1"]').classList.add('active');
+            document.querySelector('.section-header[data-target="content-1"] .toggle-icon').textContent = '▼';
         }
         
-        // --- HANDLERS DE AÇÃO ---
+        // --- HANDLERS DE AÇÃO E RENDERING ---
 
         function getConfigAtual() {
             const escalaNome = document.getElementById('escala-geradora').value;
@@ -215,14 +331,13 @@
             const pesoS = parseInt(document.getElementById('peso-subdominante').value);
             const soma = pesoT + pesoD + pesoS;
 
-            // Define os pesos no objeto gerador (Tonal Fixo/Aleatório)
+            // Define os pesos no objeto gerador
             gerador.pesos.contexto_tonal_fixo = {
                 "I": Math.round(pesoT / soma * 100), 
                 "V": Math.round(pesoD / soma * 100),
                 "IV": Math.round(pesoS / soma * 100), 
                 "II": Math.round(pesoS / soma * 100 * 0.1), 
                 "VI": Math.round(pesoT / soma * 100 * 0.1),
-                // Se não for Tonal Fixo, o Gerador.js usará a lógica default no getPesosPorContexto()
             };
 
             return {
@@ -258,10 +373,8 @@
                 event.target.closest('.acorde-container').appendChild(dropdownDiv);
             }
             
-            // Oculta outros dropdowns
             document.querySelectorAll('.sub-opcoes-dropdown').forEach(d => d.style.display = 'none');
 
-            // Toggle de visibilidade e renderização
             dropdownDiv.style.display = 'block';
             dropdownDiv.innerHTML = '';
             
@@ -270,7 +383,7 @@
                     const cifraCalc = gerador.substituirPorRelativo(acordeOriginal, acao.grau);
                     const btn = document.createElement('button');
                     btn.className = 'btn-sub-opcao';
-                    btn.textContent = `${acao.label}: ${cifraCalc}`;
+                    btn.textContent = `${acao.label} (${acao.grau}): ${cifraCalc}`;
                     btn.onclick = () => handleSubstituicaoOpcaoClick(acordeIndex, cifraCalc);
                     dropdownDiv.appendChild(btn);
                 });
