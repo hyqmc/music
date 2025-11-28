@@ -1,4 +1,4 @@
-// Gerador.js (COMPLETAMENTE COMPILADO E SEM ABREVIAÇÕES)
+// Gerador.js (CÓDIGO COMPLETO COM CORREÇÃO FINAL DE RELATIVOS)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -171,7 +171,7 @@ class GeradorDeProgressao {
         };
     }
 
-    // --- FUNÇÕES DE SUBSTITUIÇÃO ---
+    // --- FUNÇÕES DE SUBSTITUIÇÃO COERENTE ---
 
     localizarAcordePorGrau(grau_alvo, tonalidade_base) {
         const funcao_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
@@ -181,8 +181,12 @@ class GeradorDeProgressao {
         const raiz_index_absoluto = (tonalidade_index + funcao_obj.semitons) % 12;
         const raiz_cifra = this.cifrarNota(raiz_index_absoluto);
         
-        let sufixo_base = funcao_obj.qualidade === 'dom' ? '7' : (funcao_obj.qualidade === 'm' ? 'm' : 'maj');
-        if (funcao_obj.qualidade === 'm7(b5)') sufixo_base = 'm7(b5)';
+        // Define o sufixo base estritamente pela qualidade da função diatônica
+        let sufixo_base = '';
+        if (funcao_obj.qualidade === 'dom') sufixo_base = '7';
+        else if (funcao_obj.qualidade === 'm') sufixo_base = 'm';
+        else if (funcao_obj.qualidade === 'maj') sufixo_base = '';
+        else if (funcao_obj.qualidade === 'm7(b5)') sufixo_base = 'm7(b5)';
 
         return {
             cifra: raiz_cifra + sufixo_base, 
@@ -193,13 +197,41 @@ class GeradorDeProgressao {
 
     substituirPorRelativo(acorde_objeto, grau_alvo) {
         const tonalidade_base = this.config.tonalidade;
-        const acorde_substituto = this.localizarAcordePorGrau(grau_alvo, tonalidade_base);
+        const acorde_substituto_base = this.localizarAcordePorGrau(grau_alvo, tonalidade_base);
         
-        if (!acorde_substituto) return acorde_objeto.cifra;
+        if (!acorde_substituto_base) return acorde_objeto.cifra;
 
-        const sufixo_completo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
+        const nova_raiz_cifra = acorde_substituto_base.raiz; 
         
-        return acorde_substituto.raiz + sufixo_completo_original;
+        const qualidade_diatonica = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo).qualidade;
+        
+        // Extrai o sufixo completo de complexidade e tensões do original
+        const sufixo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
+
+        // Remove o sufixo de qualidade inicial (maj, m, 7, etc.) para isolar tensões e baixos
+        const regex_qualidade = /^(maj|m|7|dim|m7\(b5\)|\+)?/;
+        const tensoes_e_baixos = sufixo_original.replace(regex_qualidade, '');
+
+        let novo_sufixo = '';
+        
+        if (qualidade_diatonica === 'm') {
+            // Se o alvo é menor (III ou VI), o sufixo deve começar com 'm'. 
+            novo_sufixo = 'm';
+            // Se o original tinha sétima (maj7, 7, m7), mantemos a sétima na forma menor.
+            if (sufixo_original.includes('7') || sufixo_original.includes('maj')) {
+                novo_sufixo += '7'; // Ex: Fmaj7 -> Am7
+            }
+        } else if (qualidade_diatonica === 'maj') {
+             // Se o alvo é maior (I ou IV), mantemos o sufixo de complexidade do original.
+             novo_sufixo = sufixo_original.includes('maj') ? 'maj7' : (sufixo_original.includes('7') ? '7' : '');
+             if (sufixo_original.includes('+')) novo_sufixo = '+';
+             
+        } else {
+            // Casos dim/m7b5/dom mantêm o sufixo do diatônico.
+            novo_sufixo = qualidade_diatonica;
+        }
+
+        return nova_raiz_cifra + novo_sufixo + tensoes_e_baixos;
     }
 
     substituirPorTritono(acorde_objeto) {
@@ -222,7 +254,7 @@ class GeradorDeProgressao {
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
-    gerarSugestoesDeEmprestimoModal(acorde_objeto) {
+    generarSugestoesDeEmprestimoModal(acorde_objeto) {
         const tonalidade_base = this.config.tonalidade;
         const sugestoes_modais = [];
         
