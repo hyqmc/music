@@ -1,4 +1,4 @@
-// Gerador.js (CÓDIGO COMPLETO COM CORREÇÃO FINAL DE RELATIVOS)
+// Gerador.js (COMPLETAMENTE COMPILADO E COM CORREÇÕES FINAIS DE COERÊNCIA)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -171,7 +171,7 @@ class GeradorDeProgressao {
         };
     }
 
-    // --- FUNÇÕES DE SUBSTITUIÇÃO COERENTE ---
+    // --- FUNÇÕES DE SUBSTITUIÇÃO (CORRIGIDAS) ---
 
     localizarAcordePorGrau(grau_alvo, tonalidade_base) {
         const funcao_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
@@ -191,7 +191,8 @@ class GeradorDeProgressao {
         return {
             cifra: raiz_cifra + sufixo_base, 
             raiz: raiz_cifra,
-            semitons: funcao_obj.semitons
+            semitons: funcao_obj.semitons,
+            qualidade_diatonica: funcao_obj.qualidade // Inclui a qualidade para uso na substituição
         };
     }
 
@@ -202,13 +203,10 @@ class GeradorDeProgressao {
         if (!acorde_substituto_base) return acorde_objeto.cifra;
 
         const nova_raiz_cifra = acorde_substituto_base.raiz; 
+        const qualidade_diatonica = acorde_substituto_base.qualidade_diatonica;
         
-        const qualidade_diatonica = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo).qualidade;
-        
-        // Extrai o sufixo completo de complexidade e tensões do original
         const sufixo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
 
-        // Remove o sufixo de qualidade inicial (maj, m, 7, etc.) para isolar tensões e baixos
         const regex_qualidade = /^(maj|m|7|dim|m7\(b5\)|\+)?/;
         const tensoes_e_baixos = sufixo_original.replace(regex_qualidade, '');
 
@@ -217,18 +215,17 @@ class GeradorDeProgressao {
         if (qualidade_diatonica === 'm') {
             // Se o alvo é menor (III ou VI), o sufixo deve começar com 'm'. 
             novo_sufixo = 'm';
-            // Se o original tinha sétima (maj7, 7, m7), mantemos a sétima na forma menor.
             if (sufixo_original.includes('7') || sufixo_original.includes('maj')) {
-                novo_sufixo += '7'; // Ex: Fmaj7 -> Am7
+                novo_sufixo += '7';
             }
         } else if (qualidade_diatonica === 'maj') {
-             // Se o alvo é maior (I ou IV), mantemos o sufixo de complexidade do original.
+             // Se o alvo é maior (I ou IV), herda o sufixo maj7/7/etc.
              novo_sufixo = sufixo_original.includes('maj') ? 'maj7' : (sufixo_original.includes('7') ? '7' : '');
              if (sufixo_original.includes('+')) novo_sufixo = '+';
              
         } else {
-            // Casos dim/m7b5/dom mantêm o sufixo do diatônico.
-            novo_sufixo = qualidade_diatonica;
+            // Outros (dom, dim, m7b5) usam o sufixo base da função diatônica
+            novo_sufixo = qualidade_diatonica === 'dom' ? '7' : qualidade_diatonica;
         }
 
         return nova_raiz_cifra + novo_sufixo + tensoes_e_baixos;
@@ -254,7 +251,7 @@ class GeradorDeProgressao {
         return `${neg_raiz_cifra}${neg_sufixo}`;
     }
 
-    generarSugestoesDeEmprestimoModal(acorde_objeto) {
+    gerarSugestoesDeEmprestimoModal(acorde_objeto) {
         const tonalidade_base = this.config.tonalidade;
         const sugestoes_modais = [];
         
