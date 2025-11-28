@@ -1,4 +1,4 @@
-// Gerador.js (COMPLETAMENTE COMPILADO E COM CORREÇÕES FINAIS DE COERÊNCIA)
+// Gerador.js (COMPLETAMENTE COMPILADO E COM COERÊNCIA DE EXTENSÕES)
 
 class GeradorDeProgressao {
     constructor(configuracao, pesos = PESOS_PADRAO) {
@@ -171,7 +171,7 @@ class GeradorDeProgressao {
         };
     }
 
-    // --- FUNÇÕES DE SUBSTITUIÇÃO (CORRIGIDAS) ---
+    // --- FUNÇÕES DE SUBSTITUIÇÃO COERENTE (CORRIGIDAS) ---
 
     localizarAcordePorGrau(grau_alvo, tonalidade_base) {
         const funcao_obj = FUNCOES_HARMONICAS.find(f => f.grau === grau_alvo);
@@ -192,7 +192,7 @@ class GeradorDeProgressao {
             cifra: raiz_cifra + sufixo_base, 
             raiz: raiz_cifra,
             semitons: funcao_obj.semitons,
-            qualidade_diatonica: funcao_obj.qualidade // Inclui a qualidade para uso na substituição
+            qualidade_diatonica: funcao_obj.qualidade
         };
     }
 
@@ -207,28 +207,45 @@ class GeradorDeProgressao {
         
         const sufixo_original = acorde_objeto.cifra.substring(acorde_objeto.raiz.length);
 
-        const regex_qualidade = /^(maj|m|7|dim|m7\(b5\)|\+)?/;
+        // 1. Limpeza: Isola tensões/extensões/baixos originais que não são a qualidade base
+        const regex_qualidade = /^(maj|m|dom|dim|m7\(b5\)|\+)?/;
         const tensoes_e_baixos = sufixo_original.replace(regex_qualidade, '');
 
         let novo_sufixo = '';
-        
+        const nivel_complexidade = sufixo_original.includes('7') || sufixo_original.includes('maj');
+        const tinha_extensoes = sufixo_original.includes('9') || sufixo_original.includes('11') || sufixo_original.includes('13');
+
+
+        // 2. Determina o Novo Sufixo de Qualidade/Nível
         if (qualidade_diatonica === 'm') {
-            // Se o alvo é menor (III ou VI), o sufixo deve começar com 'm'. 
             novo_sufixo = 'm';
-            if (sufixo_original.includes('7') || sufixo_original.includes('maj')) {
+            if (nivel_complexidade) {
                 novo_sufixo += '7';
             }
         } else if (qualidade_diatonica === 'maj') {
-             // Se o alvo é maior (I ou IV), herda o sufixo maj7/7/etc.
-             novo_sufixo = sufixo_original.includes('maj') ? 'maj7' : (sufixo_original.includes('7') ? '7' : '');
-             if (sufixo_original.includes('+')) novo_sufixo = '+';
+             if (sufixo_original.includes('maj')) novo_sufixo = 'maj7';
+             else if (sufixo_original.includes('7')) novo_sufixo = '7';
+             else if (sufixo_original.includes('+')) novo_sufixo = '+';
+             else if (nivel_complexidade) novo_sufixo = ''; // Mantém como tríade Maior se não tiver 7/maj7
              
         } else {
-            // Outros (dom, dim, m7b5) usam o sufixo base da função diatônica
             novo_sufixo = qualidade_diatonica === 'dom' ? '7' : qualidade_diatonica;
         }
+        
+        // 3. Adiciona as Extensões Coerentes (Lógica de coerência)
+        let extensoes_coerentes = '';
+        if (tinha_extensoes) {
+            let novas_tensoes = ['9']; 
+            if (Math.random() > 0.5) novas_tensoes.push('13'); 
+            if (this.config.modo.includes('Lídio') && Math.random() < 0.4) {
+                novas_tensoes.push('#11'); // Permite #11 em Lídio
+            }
+            extensoes_coerentes = `(${novas_tensoes.join(',')})`;
+        }
 
-        return nova_raiz_cifra + novo_sufixo + tensoes_e_baixos;
+
+        // Montagem final: Nova Raiz + Novo Sufixo + Extensões Coerentes + Sobras (Baixos)
+        return nova_raiz_cifra + novo_sufixo + extensoes_coerentes + tensoes_e_baixos;
     }
 
     substituirPorTritono(acorde_objeto) {
